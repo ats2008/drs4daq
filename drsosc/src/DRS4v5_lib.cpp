@@ -91,7 +91,6 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
 
    strcpy(filename, fname);
    FILE *fout = fopen("log", "w");
-
    // open the binary waveform file
     FILE *f = fopen(filename, "rb");
    if (f == NULL) {
@@ -107,7 +106,7 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
       fprintf(  fout,"Found invalid file header in file \'%s\', aborting.\n", filename);
       return ;
    }
-   if (fh.version != '2') {qqqQqqqqsstt
+   if (fh.version != '2') {
       fprintf(  fout,"Found invalid file version \'%c\' in file \'%s\', should be \'2\', aborting.\n", fh.version, filename);
       return ;
    }

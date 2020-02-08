@@ -24,45 +24,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <drsoscBinary.h>
 
-typedef struct {
-   char           tag[3];
-   char           version;
-} FHEADER;
-
-typedef struct {
-   char           time_header[4];
-} THEADER;
-
-typedef struct {
-   char           bn[2];
-   unsigned short board_serial_number;
-} BHEADER;
-
-typedef struct {
-   char           event_header[4];
-   unsigned int   event_serial_number;
-   unsigned short year;
-   unsigned short month;
-   unsigned short day;
-   unsigned short hour;
-   unsigned short minute;
-   unsigned short second;
-   unsigned short millisecond;
-   unsigned short range;
-} EHEADER;
-
-typedef struct {
-   char           tc[2];
-   unsigned short trigger_cell;
-} TCHEADER;
-
-typedef struct {
-   char           c[1];
-   char           cn[3];
-} CHEADER;
-
-/*-----------------------------------------------------------------------------*/
 
 int main(int argc, const char * argv[])
 {
@@ -90,7 +53,6 @@ int main(int argc, const char * argv[])
       printf("Usage: read_binary <filename>\n");
       return 0;
    }
-   
    // open the binary waveform file
    FILE *f = fopen(filename, "rb");
    if (f == NULL) {
@@ -100,7 +62,7 @@ int main(int argc, const char * argv[])
 
    // read file header
    fread(&fh, sizeof(fh), 1, f);
-   printf("fh Tag : \ %s \n",fh.tag);
+   printf("fh Tag : \%s \n",fh.tag);
    if (fh.tag[0] != 'D' || fh.tag[1] != 'R' || fh.tag[2] != 'S') {
       printf("Found invalid file header in file \'%s\', aborting.\n", filename);
       return 0;
@@ -113,7 +75,7 @@ int main(int argc, const char * argv[])
 
    // read time header
    fread(&th, sizeof(th), 1, f);
-    printf("time header : \ %s \n",th.time_header);
+    printf("time header : \%s \n",th.time_header);
    if (memcmp(th.time_header, "TIME", 4) != 0) {
       printf("Invalid time header in file \'%s\', aborting.\n", filename);
       return 0;
@@ -122,7 +84,7 @@ int main(int argc, const char * argv[])
    for (b = 0 ; ; b++) {
       // read board header
       fread(&bh, sizeof(bh), 1, f);
-    printf("board header : \ %s \n",bh.bn);
+    printf("board header : \%s \n",bh.bn);
       if (memcmp(bh.bn, "B#", 2) != 0) {
          // probably event header found
          fseek(f, -4, SEEK_CUR);
@@ -239,8 +201,10 @@ int main(int argc, const char * argv[])
 //         		printf("%f",PulseIntegral," , ");
          	}
          	for (i=0 ; i<4 ; i++)
+         	{
 		        PulseIntegral[i]*=1;
 		        PulseIntegral[i]/=1022;
+         	}
          printf("The integral of the pulse is  : %f , %f, %f, %f \n ",PulseIntegral[0],PulseIntegral[1],
          																PulseIntegral[2],PulseIntegral[3]);
       }
