@@ -18,9 +18,6 @@ $(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 	echo "Compiled "$<" successfully!"
 
-ck: 
-	echo $(OBJDIR),$(SOURCES),$(OBJECTS)
-
 read_binary: $(rb_objs)
 	$(CC) -o $@ $^ $(CFLAGS)
 	
