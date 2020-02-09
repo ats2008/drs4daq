@@ -1,35 +1,114 @@
-/*
-   Name:           read_binary.cpp
-   Created by:     Stefan Ritt <stefan.ritt@psi.ch>
-   Date:           July 30th, 2014
+#include <DRS4v5_lib.h>
 
-   Purpose:        Example file to read binary data saved by DRSOsc.
- 
-   Compile and run it with:
- 
-      gcc -o read_binary read_binary.cpp
- 
-      ./read_binary <filename>
+int do_offset_caliberation(string ofile,string configfile)
+{
+	fstream ifile;
+	string l="";
+	vector<string> ocalib_files;
 
-   This program assumes that a pulse from a signal generator is split
-   and fed into channels #1 and #2. It then calculates the time difference
-   between these two pulses to show the performance of the DRS board
-   for time measurements.
+	ifile.open(configfile.c_str(),ios::in | ios::binary);
+	if(!ifile.is_open())
+	{
+		fprintf(stderr,"CONFIG FILE DOES NOT EXIST !!");
+		return  1 ;
+	}
+	while (!ifile.eof())
+		{	
+			getline(ifile,l,'\n') ;
+			if(l[0]=='#')
+				continue;
+			if(l[0]=='-' && l[1]=='c' && l[2]=='o')
+			{
+				for(int i=0;i<NUMBER_OF_CHANNELS;i++)
+				{
+					getline(ifile,l,'\n') ;
+					ocalib_files.push_back(l);
+					if(ifile.eof()) break;
+				}
+				break;
+			}
+		}
+	ifile.close();
+	// need to update for more than 4 channels
+	for(int i=0;i<ocalib_files.size();i++)
+	cout<<"i = "<<i<<" : "<<ocalib_files[i]<<endl;
+	if(ocalib_files.size()!=NUMBER_OF_CHANNELS)
+	{
+		fprintf(stderr,"all caliberations files not found !!%d/%d \n",ocalib_files.size(),NUMBER_OF_CHANNELS);
+	}
+	
+	vector<vector<double>> chanel_calib;
+	double* waveform;
+	waveform= new double [4*1024*2*EVENTS_IN_A_FRAME];
+	
+	cout<<"[4*1024*2*EVENTS_IN_A_FRAME]  = "<<4*1024*2*EVENTS_IN_A_FRAME<<"  "<<EVENTS_IN_A_FRAME<<endl;
+	int fstatus=0;
+	int start=0;
+	int wpos=0;
+	int eventCOUNT=0;
+	vector<double> calib;
+	for(int j=0;j<1024;j++)
+			calib.push_back(0.0);
+	for(int i=0;i<ocalib_files.size();i++)
+	{
+		start=0;
+		eventCOUNT=0;
+		fstatus=0;
 
-   $Id: read_binary.cpp 22321 2016-08-25 12:26:12Z ritt $
-*/
-
-#include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <math.h>
-
-#include <drsoscBinary.h>
-
-
-int get_events( const char * fname="",double * waveformOUT=NULL,int start_eventID=0,int end_evetID=-1) asm ("get_events");
-
+		for(int j=0;j<1024;j++)
+			calib[j]=0.0;
+		for(int j=0;j<EVENTS_IN_A_FRAME;j++)
+			for(int k=0;k<1024*2;k++)
+				waveform[wpos]=-1;
+		while(fstatus==0)
+		{	
+			cout<<ocalib_files[i]<<" at eventCOUNT = "<<eventCOUNT<<"\n";
+			fstatus=get_events(ocalib_files[i].c_str(),waveform,start,start+EVENTS_IN_A_FRAME-1);
+			cout<<"fatsts = "<<fstatus<<"\n";
+			cin>>wpos;
+			for(int j=0;j<EVENTS_IN_A_FRAME;j++)
+			{	
+				wpos=j*(1024*2*4)+i*(1024*2);
+				/*for(int k=0;k<1024;k++)
+					cout<<" i "<<i<<" , j = "<<j<<" , k = "<<k<<" , wf = "<<waveform[wpos++]<<"->"<<waveform[wpos++]<<endl;	
+				continue;*/
+				if(waveform[wpos]==0 and waveform[wpos+1]==0 and waveform[wpos+2]==0 and waveform[wpos+3]==0)
+				{
+				//	cout<<"\n breaking the loop since -1\n";
+					fstatus=-1;
+					break;
+				}
+				double to=0;
+				for(int k=0;k<1024;k++)
+						{
+						//	cout<<" i "<<i<<" , j = "<<j<<" , k = "<<k<<" , wf = "<<waveform[wpos+1]<<endl;	
+							calib[k]+=waveform[wpos+1]; //i^th channel
+							waveform[wpos++]=-1;
+							waveform[wpos++]=-1;
+							to+=calib[k];
+						}
+				//cout<<"\n for event j = "<<j<<" calb = "<<to<<endl;
+				eventCOUNT+=1;
+			}
+			
+			start+=EVENTS_IN_A_FRAME;
+		}
+		cout<<ocalib_files[i]<<" done at "<<eventCOUNT<<endl;
+		for(int j=0;j<1024;j++)
+			calib[j]/=eventCOUNT;
+		chanel_calib.push_back(calib);
+	}
+	for(int i=0;i<chanel_calib.size();i++)
+		{
+			cout<<"for  channnel  i = "<<i<<" \n\n";
+			for(int j=0;j<1024;j++)
+				cout<<chanel_calib[i][j]<<",";
+		cout<<"\n\n\n";
+		}
+	
+	
+	return 0;
+}
 
 int get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID)
 {
@@ -112,10 +191,8 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
    if (n_boards>1)
    		return 5 ;
    
-   // loop over all events in the data file
+  // loop over all events in the data file
    
-  // double *waveformOUT =NULL;
-  // waveformOUT = new double [(end_evetID-start_eventID+1)*4*1024*2];
    int waveWrite_pos=0;   
    waveformOUT[5]=-1;
 	
@@ -206,6 +283,8 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
    }
    return 0 ;
 }
+
+
 
 /*
 int main(int argc, const char * argv[])

@@ -9,7 +9,7 @@ def get_events(fname=None,start_eventID=0,end_evetID=0):
         f.close()
     except :
         print("pass a valid filename")
-        return
+        return False,None
 
     num=(end_evetID-start_eventID+1)*4*1024*2
     if num<0:
@@ -20,6 +20,7 @@ def get_events(fname=None,start_eventID=0,end_evetID=0):
     arr_type=c_double*num
     _waveformData=arr_type()
     status=drs4lib.get_events(fname.encode('utf-8'),_waveformData,s_id,e_id)
+    print(status)
     if status!=0:
     	print("ERROR !! ecode = ",status)
     	return False,None

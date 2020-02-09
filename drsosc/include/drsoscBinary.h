@@ -19,6 +19,9 @@
    $Id: read_binary.cpp 22321 2016-08-25 12:26:12Z ritt $
 */
 
+#define EVENT_SIZE_BYTES 2088 
+#define NUMBER_OF_CHANNELS 4
+
 typedef struct {
    char           tag[3];
    char           version;
@@ -56,4 +59,8 @@ typedef struct {
    char           cn[3];
 } CHEADER;
 
+typedef struct {
+	char          source[256];
+	unsigned int  depth;
+} OCALIB_HEADER;
 /*-----------------------------------------------------------------------------*/
