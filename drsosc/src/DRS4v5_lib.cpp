@@ -25,53 +25,14 @@
 #include <string.h>
 #include <math.h>
 
-#define EVENT_SIZE_BYTES 2088 
-
-typedef struct {
-   char           tag[3];
-   char           version;
-} FHEADER;
-
-typedef struct {
-   char           time_header[4];
-} THEADER;
-
-typedef struct {
-   char           bn[2];
-   unsigned short board_serial_number;
-} BHEADER;
-
-typedef struct {
-   char           event_header[4];
-   unsigned int   event_serial_number;
-   unsigned short year;
-   unsigned short month;
-   unsigned short day;
-   unsigned short hour;
-   unsigned short minute;
-   unsigned short second;
-   unsigned short millisecond;
-   unsigned short range;
-} EHEADER;
-
-typedef struct {
-   char           tc[2];
-   unsigned short trigger_cell;
-} TCHEADER;
-
-typedef struct {
-   char           c[1];
-   char           cn[3];
-} CHEADER;
-
-/*-----------------------------------------------------------------------------*/
+#include <drsoscBinary.h>
 
 
-void get_events( const char * fname="",double * waveformOUT=NULL,int start_eventID=0,int end_evetID=-1) asm ("get_events");
+int get_events( const char * fname="",double * waveformOUT=NULL,int start_eventID=0,int end_evetID=-1) asm ("get_events");
 
-void get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID)
+
+int get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID)
 {
-	int jenga=0;
    FHEADER  fh;
    THEADER  th;
    BHEADER  bh;
@@ -90,53 +51,45 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
    char filename[256];
 
    strcpy(filename, fname);
-   FILE *fout = fopen("log", "w");
    // open the binary waveform file
     FILE *f = fopen(filename, "rb");
    if (f == NULL) {
-      fprintf(  fout,"Cannot find file \'%s\'\n", filename);
-      fclose(fout);
-      waveformOUT[3]=-1;
-      return ;
+      fprintf(stderr,"Cannot find file \'%s\'\n", filename);
+      return 1 ;
    }
    // read file header
    fread(&fh, sizeof(fh), 1, f);
-   fprintf(  fout,"fh Tag : %s \n",fh.tag);
    if (fh.tag[0] != 'D' || fh.tag[1] != 'R' || fh.tag[2] != 'S') {
-      fprintf(  fout,"Found invalid file header in file \'%s\', aborting.\n", filename);
-      return ;
+      fprintf(stderr,"Found invalid file header in file \'%s\', aborting.\n", filename);
+      return 2 ;
    }
    if (fh.version != '2') {
-      fprintf(  fout,"Found invalid file version \'%c\' in file \'%s\', should be \'2\', aborting.\n", fh.version, filename);
-      return ;
+      fprintf(stderr,"Found invalid file version \'%c\' in file \'%s\', should be \'2\', aborting.\n", fh.version, filename);
+      return 3 ;
    }
 
    // read time header
    fread(&th, sizeof(th), 1, f);
-    fprintf(  fout,"time header : %s \n",th.time_header);
    if (memcmp(th.time_header, "TIME", 4) != 0) 
    {
-      fprintf(  fout,"Invalid time header in file '%s\', aborting.\n", filename);
-      return ;
+      fprintf(stderr,"Invalid time header in file '%s\', aborting.\n", filename);
+      return 4 ;
    }
    for (b = 0 ; ; b++) 
    {
       // read board header
       fread(&bh, sizeof(bh), 1, f);
-    fprintf(  fout,"board header :  %s \n",bh.bn);
       if (memcmp(bh.bn, "B#", 2) != 0) 
       {
          // probably event header found
          fseek(f, -4, SEEK_CUR);
          break;
       }
-      fprintf(  fout,"Found data for board #%d\n", bh.board_serial_number);
       // read time bin widths
       memset(bin_width[b], sizeof(bin_width[0]), 0);
       for (chn=0 ; chn<4 ; chn++) 
       {
          fread(&ch, sizeof(ch), 1, f);
-         fprintf(  fout,ch.c,ch.cn,'\n');
          if (ch.c[0] != 'C') 
          {
             // event header found
@@ -144,7 +97,6 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
             break;
          }
          i = ch.cn[2] - '0' - 1;
-         fprintf(  fout,"Found timing calibration for channel #%d\n", i+1);
          fread(&bin_width[b][i][0], sizeof(float), 1024, f);
          // fix for 2048 bin mode: double channel
          if (bin_width[b][i][1023] > 10 || bin_width[b][i][1023] < 0.01) 
@@ -156,9 +108,9 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
    }
    n_boards = b; 
    // If the datafile contains info from more than one board stop processing .. needs to be updated to board_selct option
-   // if this condition is removed EVENT_SIZE_BYTES should also be updated
+   // if this condition is removed EVENT_SIZE_BYTES (drsoscBinary.h) should also be updated
    if (n_boards>1)
-   		return ;
+   		return 5 ;
    
    // loop over all events in the data file
    
@@ -169,6 +121,11 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
 	
 	int start_offset=start_eventID*EVENT_SIZE_BYTES;
 	int seekStatus=fseek(f,start_offset,SEEK_CUR);
+	if (seekStatus)
+	{
+		fprintf(stderr,"Invalid start event ID (offset = %d )",start_offset);
+		return 6;
+	}
 	
    for (n=start_eventID ; ; n++) 
    {
@@ -177,7 +134,6 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
       if (i < 1)
          break;
       
-       //fprintf(  fout,"Found event #%d %d %d\t \n", eh.event_serial_number, eh.second, eh.millisecond);
       // loop over all boards in data file
       for (b=0 ; b<n_boards ; b++) 
       {
@@ -185,21 +141,17 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
          fread(&bh, sizeof(bh), 1, f);
          if (memcmp(bh.bn, "B#", 2) != 0) 
          {
-            fprintf(  fout,"Invalid board header in file \'%s\', aborting.\n", filename);
-            return ;
+            fprintf(stderr,"Invalid board header in file \'%s\', aborting.\n", filename);
+            return 7 ;
          }
          
          // read trigger cell
          fread(&tch, sizeof(tch), 1, f);
          if (memcmp(tch.tc, "T#", 2) != 0) 
          {
-            fprintf(  fout,"Invalid trigger cell header in file \'%s\', aborting.\n", filename);
-            return ;
+            fprintf(stderr,"Invalid trigger cell header in file \'%s\', aborting.\n", filename);
+            return 8 ;
          }
-
-         if (n_boards > 1)
-            fprintf(  fout,"Found data for board #%d\n", bh.board_serial_number);
-         
          // read channel data
          for (chn=0 ; chn<4 ; chn++) 
          {
@@ -230,7 +182,7 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
          
          
          // align cell #0 of all channels
-         t1 = time[b][1][(1024-tch.trigger_cell) % 1024];
+         t1 = time[b][0][(1024-tch.trigger_cell) % 1024];
          for (chn=0 ; chn<4 ; chn++) 
          {
             t2 = time[b][chn][(1024-tch.trigger_cell) % 1024];
@@ -238,7 +190,6 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
             for (i=0 ; i<1024 ; i++)
             {
                time[b][chn][i] += dt;
-               
                waveformOUT[waveWrite_pos++]=time[b][chn][i];
 			   waveformOUT[waveWrite_pos++]=waveform[b][chn][i];
             }
@@ -248,14 +199,12 @@ void get_events(const char * fname,double * waveformOUT,int start_eventID,int en
       }
      if(n>=end_evetID) 
      {
-		fprintf(fout,"ending at n = %d", n);
-     	fclose(fout);
-     	return;
+//		fprintf(stdout,"ending at n = %d", n);
+		break;
      }
      
    }
-   fclose(fout);
-   return ;
+   return 0 ;
 }
 
 /*
@@ -267,7 +216,7 @@ int main(int argc, const char * argv[])
       strcpy(filename, argv[1]);
    else {
       fprintf( stdout,"Usage: read_binary <filename>\n");
-      return 1;
+      return 5 1;
    } 
    fprintf( stdout,"read_binary <filename> %s\n",filename);
     double *wdata =NULL;
@@ -278,7 +227,7 @@ int main(int argc, const char * argv[])
    for (int i=0;i<10;i++)
    	fprintf( stdout,"%f,%f \n",wdata[2*i],wdata[2*i+1]);
   
-  return 0;
+  return 5 0;
 }
 
 */
