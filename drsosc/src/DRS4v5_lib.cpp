@@ -30,7 +30,7 @@ int do_offset_caliberation(string ofile,string configfile)
 		}
 	ifile.close();
 	// need to update for more than 4 channels
-	for(int i=0;i<ocalib_files.size();i++)
+	for(unsigned int i=0;i<ocalib_files.size();i++)
 	cout<<"i = "<<i<<" : "<<ocalib_files[i]<<endl;
 	if(ocalib_files.size()!=NUMBER_OF_CHANNELS)
 	{
@@ -49,7 +49,7 @@ int do_offset_caliberation(string ofile,string configfile)
 	vector<double> calib;
 	for(int j=0;j<1024;j++)
 			calib.push_back(0.0);
-	for(int i=0;i<ocalib_files.size();i++)
+	for(unsigned int i=0;i<ocalib_files.size();i++)
 	{
 		start=0;
 		eventCOUNT=0;
@@ -60,12 +60,12 @@ int do_offset_caliberation(string ofile,string configfile)
 		for(int j=0;j<EVENTS_IN_A_FRAME;j++)
 			for(int k=0;k<1024*2;k++)
 				waveform[wpos]=-1;
+		cout<<"Starting "<<ocalib_files[i]<<"\n";
 		while(fstatus==0)
 		{	
-			cout<<ocalib_files[i]<<" at eventCOUNT = "<<eventCOUNT<<"\n";
+			cout<<"\t\t for event ids  "<<start<<" to "<<start+EVENTS_IN_A_FRAME-1<<"\n";
 			fstatus=get_events(ocalib_files[i].c_str(),waveform,start,start+EVENTS_IN_A_FRAME-1);
-			cout<<"fatsts = "<<fstatus<<"\n";
-			cin>>wpos;
+//			cin>>wpos;
 			for(int j=0;j<EVENTS_IN_A_FRAME;j++)
 			{	
 				wpos=j*(1024*2*4)+i*(1024*2);
@@ -83,8 +83,8 @@ int do_offset_caliberation(string ofile,string configfile)
 						{
 						//	cout<<" i "<<i<<" , j = "<<j<<" , k = "<<k<<" , wf = "<<waveform[wpos+1]<<endl;	
 							calib[k]+=waveform[wpos+1]; //i^th channel
-							waveform[wpos++]=-1;
-							waveform[wpos++]=-1;
+							waveform[wpos++]=0;
+							waveform[wpos++]=0;
 							to+=calib[k];
 						}
 				//cout<<"\n for event j = "<<j<<" calb = "<<to<<endl;
@@ -98,7 +98,7 @@ int do_offset_caliberation(string ofile,string configfile)
 			calib[j]/=eventCOUNT;
 		chanel_calib.push_back(calib);
 	}
-	for(int i=0;i<chanel_calib.size();i++)
+	for(unsigned int i=0;i<chanel_calib.size();i++)
 		{
 			cout<<"for  channnel  i = "<<i<<" \n\n";
 			for(int j=0;j<1024;j++)
@@ -106,7 +106,21 @@ int do_offset_caliberation(string ofile,string configfile)
 		cout<<"\n\n\n";
 		}
 	
-	
+	fstream ofile_bin,ofile_txt;
+	ofile_bin.open("calib/offset_calib.dat",ios::out | ios::binary);
+	ofile_txt.open("calib/offset_calib.txt",ios::out );
+	for(unsigned int i=0;i<chanel_calib.size();i++)
+	{
+		ofile_txt<<"ch id : "<<to_string(i)<<"\n";
+		ofile_bin.write((char *)(&i),sizeof(i));
+		for(int j=0;j<1024;j++)
+		{
+			ofile_txt<<j<<","<<chanel_calib[i][j]<<"\n";
+			ofile_bin.write((char *)(&chanel_calib[i][j]),sizeof(chanel_calib[i][j]));
+		}
+	}
+	ofile_bin.close();
+	ofile_txt.close();
 	return 0;
 }
 
