@@ -34,7 +34,7 @@ int do_offset_caliberation(string ofile,string configfile)
 	cout<<"i = "<<i<<" : "<<ocalib_files[i]<<endl;
 	if(ocalib_files.size()!=NUMBER_OF_CHANNELS)
 	{
-		fprintf(stderr,"all caliberations files not found !!%d/%d \n",ocalib_files.size(),NUMBER_OF_CHANNELS);
+		fprintf(stderr,"all caliberations files not found !!%d /%d \n",int(ocalib_files.size()),NUMBER_OF_CHANNELS);
 	}
 	
 	vector<vector<double>> chanel_calib;
@@ -63,6 +63,7 @@ int do_offset_caliberation(string ofile,string configfile)
 		cout<<"Starting "<<ocalib_files[i]<<"\n";
 		while(fstatus==0)
 		{	
+			if(start > 40) break;
 			cout<<"\t\t for event ids  "<<start<<" to "<<start+EVENTS_IN_A_FRAME-1<<"\n";
 			fstatus=get_events(ocalib_files[i].c_str(),waveform,start,start+EVENTS_IN_A_FRAME-1);
 //			cin>>wpos;
@@ -107,8 +108,10 @@ int do_offset_caliberation(string ofile,string configfile)
 		}
 	
 	fstream ofile_bin,ofile_txt;
-	ofile_bin.open("calib/offset_calib.dat",ios::out | ios::binary);
-	ofile_txt.open("calib/offset_calib.txt",ios::out );
+	ofile_bin.open("calib/toffset_calib.dat",ios::out | ios::binary);
+	ofile_txt.open("calib/toffset_calib.txt",ios::out );
+	
+	double val;
 	for(unsigned int i=0;i<chanel_calib.size();i++)
 	{
 		ofile_txt<<"ch id : "<<to_string(i)<<"\n";
@@ -116,7 +119,8 @@ int do_offset_caliberation(string ofile,string configfile)
 		for(int j=0;j<1024;j++)
 		{
 			ofile_txt<<j<<","<<chanel_calib[i][j]<<"\n";
-			ofile_bin.write((char *)(&chanel_calib[i][j]),sizeof(chanel_calib[i][j]));
+			val=chanel_calib[i][j];
+			ofile_bin.write((char *)(&val),sizeof(val));
 		}
 	}
 	ofile_bin.close();
@@ -124,7 +128,7 @@ int do_offset_caliberation(string ofile,string configfile)
 	return 0;
 }
 
-int get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID)
+int get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID,bool offset_caliberate)
 {
    FHEADER  fh;
    THEADER  th;
@@ -142,10 +146,11 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
    int i, j, b, chn, n, chn_index, n_boards;
    double t1, t2, dt;
    char filename[256];
-
+	double ch_offset[4][1024];
    strcpy(filename, fname);
    // open the binary waveform file
     FILE *f = fopen(filename, "rb");
+    fstream ifile;
    if (f == NULL) {
       fprintf(stderr,"Cannot find file \'%s\'\n", filename);
       return 1 ;
@@ -156,7 +161,8 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
       fprintf(stderr,"Found invalid file header in file \'%s\', aborting.\n", filename);
       return 2 ;
    }
-   if (fh.version != '2') {
+   if (fh.version != '2') 
+   {
       fprintf(stderr,"Found invalid file version \'%c\' in file \'%s\', should be \'2\', aborting.\n", fh.version, filename);
       return 3 ;
    }
@@ -218,6 +224,28 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
 		return 6;
 	}
 	
+	
+	// Read the channel offsets
+	if (offset_caliberate)
+	{
+		ifile.open("calib/offset_calib.dat",ios::in | ios::binary);
+		if(!ifile.is_open())
+		{
+			fprintf(stderr,"CONFIG FILE DOES NOT EXIST !!");
+			return  6 ;
+		}
+		int bid;
+		while(!ifile.eof())
+			{
+				ifile.read((char *)(&bid),sizeof(bid));
+				if(ifile.eof()) break;
+				for(int j=0;j<1024;j++)
+					{
+						ifile.read((char *)(&ch_offset[bid][j]),sizeof(double));
+					}
+			}
+		ifile.close();
+	}
    for (n=start_eventID ; ; n++) 
    {
       // read event header
@@ -282,7 +310,9 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
             {
                time[b][chn][i] += dt;
                waveformOUT[waveWrite_pos++]=time[b][chn][i];
-			   waveformOUT[waveWrite_pos++]=waveform[b][chn][i];
+               
+               if(!offset_caliberate) ch_offset[chn][i]=0.0;
+               waveformOUT[waveWrite_pos++]=waveform[b][chn][i]-ch_offset[chn][i];
             }
            
          }

@@ -3,7 +3,7 @@ import numpy as np
 
 drs4lib=CDLL('./lib/libdrs4.so')
 
-def get_events(fname=None,start_eventID=0,end_evetID=0):
+def get_events(fname=None,start_eventID=0,end_evetID=0,offset_caliberation=False):
     try :
         f=open(fname,'r')
         f.close()
@@ -17,9 +17,10 @@ def get_events(fname=None,start_eventID=0,end_evetID=0):
         return None
     s_id=c_int(start_eventID)
     e_id=c_int(end_evetID)
+    offset_caliberate=c_bool(offset_caliberation)
     arr_type=c_double*num
     _waveformData=arr_type()
-    status=drs4lib.get_events(fname.encode('utf-8'),_waveformData,s_id,e_id)
+    status=drs4lib.get_events(fname.encode('utf-8'),_waveformData,s_id,e_id,offset_caliberate)
     print(status)
     if status!=0:
     	print("ERROR !! ecode = ",status)
