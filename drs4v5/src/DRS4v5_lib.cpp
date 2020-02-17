@@ -332,11 +332,11 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
 int save_event_binary(const char * fname,DRS_EVENT anevent)
 {
 	fstream ofile;
-	ofile.open(fname,ios::out | ios::binary |ios::app);
+	ofile.open(fname,ios::out | ios::binary |ios::app );
 	int channels=anevent.waveform.size();
 	ofile.write((char *)(&anevent.eheader),sizeof(anevent.eheader));
 	ofile.write((char *)(&channels),sizeof(channels));
-
+	cout<<" chn = "<<channels<<"\n";
 	for(unsigned int i=0;i<channels;i++)
 	{
 		ofile.write((char *)(anevent.time[i]),10*sizeof(double));
@@ -347,18 +347,50 @@ int save_event_binary(const char * fname,DRS_EVENT anevent)
 
 vector<DRS_EVENT> read_event_binary(const char * fname)
 {
-	fstream ofile;
-	ofile.open(fname,ios::in | ios::binary);
+	vector<DRS_EVENT> eventList;
+	DRS_EVENT * anevent;
+	//EHEADER anevent.eheader;
+	int channels;
+	double * db_buffr;
 	
-	ofile.write((char *)(&event_header),sizeof(event_header));
-	ofile.write((char *)(&channels),sizeof(channels));
-
-	for(unsigned int i=0;i<channels;i++)
+	fstream ifile;
+	ifile.open(fname,ios::in | ios::binary);
+	if(!ifile.is_open())
 	{
-		ofile.write((char *)(time[i]),10*sizeof(double));
-		ofile.write((char *)(waveform[i]),10*sizeof(double));
+		cout<<"\n ERROR HAPPEND !! FILE DOES NOT EXIST !! \n";
+		cout<<"fname : "<<fname;
+		exit(0);
 	}
-	ofile.close();
+	int id=0;
+	while(!ifile.eof())
+	{
+		id++;
+		anevent= new DRS_EVENT;
+		cout<<"at loop count = "<<id<<"\n";
+		//if(id>10) break;
+		ifile.read((char *)(&(*anevent).eheader),sizeof((*anevent).eheader));
+		ifile.read((char *)(&channels),sizeof(channels));
+		cout<<"EVENT ID  = "<<(*anevent).eheader.event_serial_number<<"\n";
+		cout<<"yr = "<<(*anevent).eheader.year<<"\n";
+		cout<<"month = "<<(*anevent).eheader.month<<"\n";
+		cout<<"day  = "<<(*anevent).eheader.day<<"\n";
+		cout<<"hr  = "<<(*anevent).eheader.hour<<"\n";
+		cout<<"min  = "<<(*anevent).eheader.minute<<"\n";
+		cout<<"sec  = "<<(*anevent).eheader.second<<"\n";
+		cout<<" chn = "<<channels<<"\n";
+		for(unsigned int i=0;i<channels;i++)
+		{
+			db_buffr=new double[10];
+			ifile.read((char *)(db_buffr),10*sizeof(double));
+			(*anevent).time.push_back(db_buffr);
+			db_buffr=new double[10];
+			ifile.read((char *)(db_buffr),10*sizeof(double));
+			(*anevent).waveform.push_back(db_buffr);
+		}
+		eventList.push_back(*anevent);
+	}
+	ifile.close();
+	return eventList;
 }
 
 
