@@ -1,0 +1,35 @@
+/* XPM */
+static const char *neg_xpm[] = {
+/* width height num_colors chars_per_pixel */
+"    20    20        8            1",
+/* colors */
+"` c #36349b",
+". c #a2a1ba",
+"# c #dddfde",
+"a c #82818a",
+"b c None",
+"c c #5959a4",
+"d c #babbbd",
+"e c #9292a0",
+/* pixels */
+"bbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbb",
+"#######bbbbbbbbbbbbb",
+"daaaaaa#bbbbbbbbbbbb",
+"b#ddddee#bbbbbbbbbbb",
+"bb#####adbbbbbbbbbbb",
+"bbbbbbb.ac#bbbbbbbbb",
+"bbbbbb.c``.bbbbbbbbb",
+"bbbbbbe```a#bbbbbbbb",
+"bbbbbbb.``c#bbbbbbbb",
+"bbbbbbbb.``dbbbbbbbb",
+"bbbbbbbbb.`ebbbbbbbb",
+"bbbbbbbbbbaa#bbbbbbb",
+"bbbbbbbbbb#adbbbbbbb",
+"bbbbbbbbbbb.e#####bb",
+"bbbbbbbbbbb#aaaaaadb",
+"bbbbbbbbbbbbbdddddd#",
+"bbbbbbbbbbbbbb######",
+"bbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbb"
+};

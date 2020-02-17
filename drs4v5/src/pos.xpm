@@ -1,0 +1,35 @@
+/* XPM */
+static const char *pos_xpm[] = {
+/* width height num_colors chars_per_pixel */
+"    20    20        8            1",
+/* colors */
+"` c #37369b",
+". c #a8a9ab",
+"# c #dfdedf",
+"a c #c3c3c4",
+"b c #7273a4",
+"c c #868589",
+"d c #5c5ca7",
+"e c None",
+/* pixels */
+"eeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeee#######e",
+"eeeeeeeeeee#ccccccae",
+"eeeeeeeeeee..aaaaaaa",
+"eeeeeeeeee#b#a######",
+"eeeeeeeeeedca#eeeeee",
+"eeeeeeeeed`a.eeeeeee",
+"eeeeeeeed``.aeeeeeee",
+"eeeeeeed``d.#eeeeeee",
+"eeeeeeb```d.eeeeeeee",
+"eeeeeee.``baeeeeeeee",
+"eeeeeee..c.#eeeeeeee",
+"eeeeee#c#a##eeeeeeee",
+"e#####..a#eeeeeeeeee",
+".cccccc#aeeeeeeeeeee",
+"e#....aa#eeeeeeeeeee",
+"ee######eeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeee",
+"eeeeeeeeeeeeeeeeeeee"
+};
