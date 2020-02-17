@@ -74,7 +74,7 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel, doubl
 //		i++;
 //	}
 	
-	printf("!! %d , %d  \n",start,end);
+//	printf("!! %d , %d  \n",start,end);
 	//start-=int(neg_offset*freq);
 	//end=start + int(integrate_window*freq);
 	if (start<1) start=1;
@@ -89,7 +89,7 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel, doubl
 		integral+=waveform[channel][i]*dt;
 		i++;
 	}
-	printf("!! %d , %d  ,%d \n",start,i,int(TERMINAL_RESISTANCE));
+//	printf("!! %d , %d  ,%d \n",start,i,int(TERMINAL_RESISTANCE));
 	return integral/TERMINAL_RESISTANCE;
 }
 
@@ -209,10 +209,10 @@ int main()
       /* Save waveform: X=time_array[i], Yn=wave_array[n][i] */
 	  f = fopen("data.txt", "a");
       fprintf(f, "#Event,%d \n", eid);
-      if(eid>=0)
+      if(eid%40==0)
 		{
 		  fprintf(f, "#Waveform\n");
-		  for (i=0 ; i<1024 ; i++)
+		  for (i=450 ; i<950 ; i++)
 		  {
 		  		for (j=0 ; j<4 ; j++) 
 		  			fprintf(f,"%f , %f, ", time_array[j][i],wave_array[j][i]);
