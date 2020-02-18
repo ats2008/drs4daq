@@ -7,25 +7,29 @@ using namespace std;
 
 int main()
 {
-	DRS_EVENT anevent;
+	DRS_EVENT anevent[5];
 	//EHEADER aheder;
-	strcpy(anevent.eheader.event_header,"ats");
-	anevent.eheader.event_serial_number=12;
-	anevent.eheader.year=2020;
-	anevent.eheader.month=2;
-	anevent.eheader.day=3;
-	anevent.eheader.hour=4;
-	anevent.eheader.minute=5;
-	anevent.eheader.second=6;
-	anevent.eheader.millisecond=7;
-	anevent.eheader.range=0;
+	for(int k=0;k<5;k++)
+	{
+		strcpy(anevent[k].eheader.event_header,"ats");
+		anevent[k].eheader.event_serial_number=12;
+		anevent[k].eheader.year=2020;
+		anevent[k].eheader.month=2;
+		anevent[k].eheader.day=3;
+		anevent[k].eheader.hour=4;
+		anevent[k].eheader.minute=5;
+		anevent[k].eheader.second=6;
+		anevent[k].eheader.millisecond=7;
+		anevent[k].eheader.range=0;
+	}
 	double * ptr;
+	for(int k=0;k<5;k++)
 	for(int j=0;j<4;j++)
 	{
 		ptr=new double [10];
-		anevent.waveform.push_back(ptr);
+		anevent[k].waveform.push_back(ptr);
 		ptr=new double [10];
-		anevent.time.push_back(ptr);
+		anevent[k].time.push_back(ptr);
 	}
 	string fname="ats.dat";
 	cout<<"\nwriting begins";
@@ -33,21 +37,23 @@ int main()
 	int p=0;
 	for(int k=0;k<5;k++)
 	{
-	anevent.eheader.event_serial_number=eid++;
-		anevent.eheader.year=20*k;
+	anevent[k].eheader.event_serial_number=eid++;
+		anevent[k].eheader.year=20*k;
 			for(int j=0;j<4;j++)
 			for(int i=0;i<10;i++)
 				{
-					anevent.waveform[j][i]=p++;
-					anevent.time[j][i]=p++;
+					anevent[k].waveform[j][i]=p++;
+					anevent[k].time[j][i]=p++;
 				}
-		save_event_binary(fname.c_str(),anevent);
 	}
+	save_event_binary(fname.c_str(),anevent,5);
+	for(int k=0;k<5;k++)
+		anevent[k].clear_data();
 	cout<<"\nwriting ends";
 	vector<DRS_EVENT> elist;
-	cout<<"\nreading begins";
+	cout<<"\n\n\n\n reading begins";
 	elist=read_event_binary(fname.c_str());
-	cout<<"\nreading ends with  len = "<<elist.size()<<"\n";
+	cout<<"\n\n\nreading ends with  len = "<<elist.size()<<"\n";
 	int l;
 	cin>>l;
 	vector<DRS_EVENT>::iterator evt_itr =elist.begin();
@@ -71,7 +77,9 @@ int main()
 			cout<<"\n";
 		}
 		cout<<"\n\n";
+		evt_itr->clear_data();
 	}
+	
 	return 0;
 
 }

@@ -66,8 +66,8 @@ drscl: $(OBJECTS) DRS.o averager.o drscl.o
 drs_exam: $(OBJECTS) DRS.o averager.o drs_exam.o
 	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o drs_exam.o -o drs_exam $(LIBS) $(WXLIBS)
 
-muonDet: $(OBJECTS) DRS.o averager.o muonDet.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o muonDet.o -o muonDet $(LIBS) $(WXLIBS)
+muonDet: $(OBJECTS) DRS.o averager.o muonDet.o DRS4v5_lib.o
+	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o muonDet.o -o muonDet DRS4v5_lib.o $(LIBS) $(WXLIBS)
 
 try: DRS4v5_lib.o try.o 
 	$(CXX) $(CFLAGS)  DRS4v5_lib.o try.o -o try $(LIBS) 

@@ -5,12 +5,14 @@
 #include <cstring>
 #include <math.h>
 #include <fstream>
-#include <drsoscBinary.h>
 #include <iostream>
 #include <vector>
 
+#include <drsoscBinary.h>
 
 #define EVENTS_IN_A_FRAME 50
+
+#define TERMINAL_RESISTANCE 50
 
 using namespace std;
 
@@ -18,8 +20,22 @@ class DRS_EVENT
 {
 	public:
 	   EHEADER         	eheader;
-	   vector<double *>	time;
-	   vector<double *>	waveform;
+	   vector<float *>	time;
+	   vector<float *>	waveform;
+	   void clear_data()
+	   {
+		   std::cout<<"here for "<<(this->eheader).event_serial_number;
+		   	vector<float *>::iterator t_itr=time.begin(); 
+		   	vector<float *>::iterator w_itr=waveform.begin();
+		   	while (t_itr!=time.end())
+		   	{
+		   		delete [] *t_itr;
+		   		delete [] *w_itr;
+		   		t_itr++;
+		   		w_itr++;
+		   	} 
+		   std::cout<<"  DONE !!\n";
+	   }
 } ;
 
 
@@ -28,5 +44,6 @@ int get_events( const char * fname="",double * waveformOUT=NULL,int start_eventI
 
 int do_offset_caliberation(string ofile="config/offset_cofig.dat",string configfile="drsosc.config");
 
-int save_event_binary(const char * fname,DRS_EVENT event);
+int save_event_binary(const char * fname,DRS_EVENT events[], int event_count);
+
 vector<DRS_EVENT> read_event_binary(const char * fname);
