@@ -22,13 +22,13 @@ int main()
 		anevent[k].eheader.millisecond=7;
 		anevent[k].eheader.range=0;
 	}
-	double * ptr;
+	float * ptr;
 	for(int k=0;k<5;k++)
 	for(int j=0;j<4;j++)
 	{
-		ptr=new double [10];
+		ptr=new float [10];
 		anevent[k].waveform.push_back(ptr);
-		ptr=new double [10];
+		ptr=new float [10];
 		anevent[k].time.push_back(ptr);
 	}
 	string fname="ats.dat";
@@ -50,14 +50,16 @@ int main()
 	for(int k=0;k<5;k++)
 		anevent[k].clear_data();
 	cout<<"\nwriting ends";
+	
 	vector<DRS_EVENT> elist;
 	cout<<"\n\n\n\n reading begins";
+	fname="data/atsrun/events.dat";
 	elist=read_event_binary(fname.c_str());
 	cout<<"\n\n\nreading ends with  len = "<<elist.size()<<"\n";
 	int l;
-	cin>>l;
+	l=0;
 	vector<DRS_EVENT>::iterator evt_itr =elist.begin();
-	vector<double *>::iterator titr,witr;
+	vector<float *>::iterator titr,witr;
 	for (;evt_itr!=elist.end();evt_itr++)
 	{
 		cout<<"EVENT ID  = "<<(evt_itr->eheader).event_serial_number<<"\n";
@@ -70,8 +72,10 @@ int main()
 		cout<<"millis  = "<<(evt_itr->eheader).millisecond<<"\n";
 		witr=(evt_itr->waveform).begin();
 		titr=(evt_itr->time).begin();
+		l=0;
 		for (;witr!=(evt_itr->waveform).end();titr++,witr++)
 		{
+			cout<<"for ch  = "<<l++<<endl;
 			for(int i=0;i<10;i++)
 			cout<<"("<<(*titr)[i]<<","<<(*witr)[i]<<") ,";
 			cout<<"\n";

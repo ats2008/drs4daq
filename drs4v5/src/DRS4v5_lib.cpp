@@ -398,5 +398,28 @@ vector<DRS_EVENT> read_event_binary(const char * fname)
 	ifile.close();
 	return eventList;
 }
-
-
+int get_channel_offsets(string fname,vector<double *> *calib_data,int channels[])
+{
+	fstream ifile;
+	int ch;
+	double *db_buffr;
+	calib_data->clear();
+	int idx=0;int t;
+	ifile.open(fname.c_str(),ios::in | ios::binary);
+	if(!ifile.is_open())
+	{
+		cout<<"\n ERROR HAPPEND !! FILE DOES NOT EXIST !! \n";
+		cout<<"fname : "<<fname;
+		exit(0);
+	}
+	ifile.read((char *)(&ch),sizeof(int));
+	while(!ifile.eof())
+	{
+		channels[idx]=ch;idx++;
+		db_buffr=new double[1024];
+		ifile.read((char *)(db_buffr),1024*sizeof(double));
+		calib_data->push_back(db_buffr);
+		ifile.read((char *)(&ch),sizeof(ch));
+	}
+	return 0;
+}

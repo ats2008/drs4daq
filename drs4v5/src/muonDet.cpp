@@ -32,6 +32,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctime>
+#include <pthread.h>
 
 #include "strlcpy.h"
 #include <fstream>
@@ -48,7 +49,20 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel,
 						double trigger_level=-40.0,double neg_offset=20,double integrate_window=100, double freq =5.12);
 
 
+static volatile bool break_loop = false;
 
+static void* exit_loop(void*)
+{
+   while(!break_loop) 
+   {
+       if (cin.get() == 'q')
+       {
+           //! desired user input 'q' received
+           break_loop = true;
+       }
+   }
+   pthread_exit(NULL);
+}
 int main()
 {
    int i, j, nBoards;
@@ -56,17 +70,20 @@ int main()
    DRSBoard *b;
    float time_array[4][1024];
    float wave_array[4][1024];
+   vector<double*> calib_data;
+   int calib_channel[4]={0,1,2,3};
+   int calib_channel_id=0;
 
    fstream file;
    string run_name="atsrun",energy_str,event_str,temp_str;
-   int event_counter=0,channel=3,skip_evts=2;
+   int event_counter=500,channel=3,skip_evts=2;
    bool infinite=false;
    bool save_waveform=false;
    int updates_stats_interval=UPADATE_STATS_INTERVAL;
    int event_rate;
    
    time_t start_t = time(0);
-   time_t curr_t,diff;
+   time_t curr_t,diff,etime;
    tm* elapsed_t ;
    char* dt=ctime(&start_t);
    cout<<"\n Current time  = "<<dt;
@@ -104,6 +121,9 @@ int main()
 	char remark_option='n';
    	event_str="mkdir -p data/"+run_name;
 	system(event_str.c_str());
+	event_str="chmod -R 777 data/"+run_name;
+	system(event_str.c_str());
+	
 	cout<<"\n Do you want to enter any remarks [y/n] ?\t:\t";
 		cin>>remark_option;
 	if(remark_option=='y' or remark_option=='Y')
@@ -174,11 +194,11 @@ int main()
     cout<<"\nenergy integrals written to  \t:\t"<<energy_str;
     if(save_waveform)
     	{
-	    	cout<<"\nwaveforms are written to\t:\t"<<energy_str;
+	    	cout<<"\nwaveforms are written to\t:\t"<<event_str;
  		cout<<" [ One out of every "<<skip_evts<<" saved]";
     	}
     if(infinite)
-    	cout<<"\nOn cotinious run .. pres Ctrl + c to quit\n";
+    	cout<<"\nOn cotinious run .. input 'q' then 'enter' to quit\n";
  	else 
  		cout<<"\nNumber of events to be monitored :\t"<<event_counter;
  	cout<<"\nChannel to be integrated  : "<<channel+1<<"\n\n";
@@ -200,19 +220,23 @@ int main()
    
    b->SetTriggerDelayNs(50);             // 50 ns trigger delay
    
-   unsigned long int eid=0;
-   DRS_EVENT muEvent[1];
-   for(int i=0;i<4;i++)
-   {
-	   muEvent[0].time.push_back(time_array[i]);
-	   muEvent[0].waveform.push_back(wave_array[i]);
-   }
    
+	   unsigned long int eid=0;
 	 curr_t = time(0);
      diff=curr_t;
 	 event_rate = int(float(updates_stats_interval)/int(diff-curr_t+1));
 	 dt=ctime(&curr_t);
 	 fflush(stdout);
+	get_channel_offsets("calib/offset_calib.dat",&calib_data,calib_channel);
+    cout<<"offset caliberation read for "<<calib_data.size()<<"  channels ";
+	vector<double*>::iterator ditr=calib_data.begin();
+	for(int k=0;ditr!=calib_data.end();ditr++)
+		{	
+			cout<<calib_channel[k++]<<"  ";
+			for (int j=0;j<1024;j++)
+				(*ditr)[j]*=1000;
+		}
+	cout<<"\n\n\n";
 	 cout<<"\tCurrent time\t:\t"<<dt;
 	 diff=curr_t-start_t;
 	 elapsed_t = gmtime(&diff);
@@ -222,8 +246,31 @@ int main()
 	 cout<<elapsed_t->tm_sec<<"sec "<<"\n";
 	 cout<<"Total Number of Events\t:\t"<<eid<<"\n";
 	 cout<<"Rate of events = \t:\t"<<eid<<" / min \n";
-	         
-   while(infinite or (event_counter>eid)) 
+	
+		//For exiting on 'q' 
+		 pthread_t tId;
+		 (void) pthread_create(&tId, 0, exit_loop, 0);
+   
+
+   
+   
+   DRS_EVENT muEvent[1];
+   
+   for(int i=0;i<4;i++)
+   {
+	   muEvent[0].time.push_back(time_array[i]);
+	   muEvent[0].waveform.push_back(wave_array[i]);
+   }
+	
+	for(int i=0;i<4;i++)
+		if(calib_channel[i]==channel)
+			calib_channel_id=i;
+	
+	strcpy(muEvent[0].eheader.event_header,"muT");
+	muEvent[0].eheader.millisecond=0;
+	muEvent[0].eheader.range=0;
+	int save_to_disc_count=0;
+   while( (infinite or (event_counter>eid)) and !break_loop) 
    {
 	  eid++;
       b->StartDomino();							/* start board (activate domino wave) */
@@ -248,24 +295,44 @@ int main()
 
 			b->GetTime(0, 6, b->GetTriggerCell(0), time_array[3]);
 			b->GetWave(0, 6, wave_array[3]);
+			
+			etime = time(0);
+			elapsed_t = localtime(&etime);
+
+			muEvent[0].eheader.event_serial_number=eid;
+			muEvent[0].eheader.year=elapsed_t->tm_year;
+			muEvent[0].eheader.month=elapsed_t->tm_mon;
+			muEvent[0].eheader.day=elapsed_t->tm_mday;
+			muEvent[0].eheader.hour=elapsed_t->tm_hour;
+			muEvent[0].eheader.minute=elapsed_t->tm_min;
+			muEvent[0].eheader.second=elapsed_t->tm_sec;
+			
+			for(int i=0;i<4;i++)
+			for(int j=0;j<1024;j++)
+			{
+				wave_array[calib_channel[i]][j]-=calib_data[calib_channel[i]][j];
+			}
+			save_event_binary(event_str.c_str(),muEvent,1);
+			save_to_disc_count++;
       }
       else
       {
 		b->GetTime(0, 2*channel, b->GetTriggerCell(0), time_array[channel]);
 		b->GetWave(0, 2*channel, wave_array[channel]);
+		for(int i=0;i<1024;i++)
+			{
+				wave_array[channel][i]-=calib_data[calib_channel_id][i];
+			}
       }
       
 	 //double get_energy(float waveform[8][1024],int channel, double trigger_level,double neg_offset,double integrate_window,double freq )
+      
       energy=get_energy(wave_array,time_array, channel, -30,10,50,5.12);
 	  file.open(energy_str.c_str(), ios::out | ios::app);
 	  temp_str=to_string(eid)+","+to_string(energy)+"\n";
       file<<temp_str;
 	  file.close();
 	
-	  if(save_waveform) if(eid%skip_evts==0)
-		{
-			save_event_binary(event_str.c_str(),muEvent,1);
-	   	}
 	   if(eid%updates_stats_interval==0)
 	   {
 	         cout<<"\033[F";
@@ -280,17 +347,39 @@ int main()
 	         cout<<"\tCurrent time\t:\t"<<dt;
 	         diff=curr_t-start_t;
 	         elapsed_t = gmtime(&diff);
-	         cout<<"\tElapsed time\t:\t"<<elapsed_t->tm_mday-1<<"days ";
+	         cout<<"\tElapsed time\t:\t"<<elapsed_t->tm_yday<<"days ";
 	         cout<<elapsed_t->tm_hour<<"hrs ";
 	         cout<<elapsed_t->tm_min<<"min ";
 	         cout<<elapsed_t->tm_sec<<"sec "<<"\n";
 	         cout<<"Total Number of Events\t:\t"<<eid<<endl;
 	         cout<<"Rate of events = \t:\t"<<event_rate<<" / min \n";
 	   }
+	  printf("\r\t\t\t\t\t\t\t\t\t!!");
       printf("\rEvent ID  %d \t\t|\tcharge : %f  pC", eid,energy);
    }
-	cout<<"\n\n";
+   
    delete drs;
+   break_loop=true;
+   (void) pthread_join(tId, NULL);
+   	temp_str="data/"+run_name+"/remarks.txt";
+   	file.open(temp_str.c_str(),ios::app|ios::out);
+   	file<<"\n-------------------------------------------------\n";
+   	dt=ctime(&start_t);
+   	file<<"Run started at : "<<dt;
+   	curr_t=time(0);
+   	dt=ctime(&curr_t);
+   	file<<"Run stopped at : "<<dt;
+   	file<<"Triggers for channels :"<<trigger_level<<endl;
+   	file<<"Channel integrated:"<<channel+1<<endl;
+   	file<<"Number of events to be recorded [-1-> continious mode]: "<<event_counter<<endl;
+   	file<<"Number of events recorded : "<<eid<<endl;
+   	file<<"Number of events skipped at a stretch : "<<skip_evts-1<<endl;
+   	file<<"Number of events saved to disc : "<<save_to_disc_count<<endl;
+   	file<<"\n-------------------------------------------------\n";
+   	
+   	event_str="chmod -R 777 data/"+run_name;
+	system(event_str.c_str());
+	cout<<"\n\n";
 }
 
 

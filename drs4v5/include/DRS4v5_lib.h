@@ -44,6 +44,8 @@ int get_events( const char * fname="",double * waveformOUT=NULL,int start_eventI
 
 int do_offset_caliberation(string ofile="config/offset_cofig.dat",string configfile="drsosc.config");
 
+int get_channel_offsets(string ofile="calib/offset_calib.dat",vector<double *> *calib_data =NULL,int channels[]=NULL);
+
 int save_event_binary(const char * fname,DRS_EVENT events[], int event_count);
 
 vector<DRS_EVENT> read_event_binary(const char * fname);
