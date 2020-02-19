@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <ctime>
 #include <pthread.h>
+#include <chrono>
+#include <thread>
 
 #include "strlcpy.h"
 #include <fstream>
@@ -63,13 +65,179 @@ static void* exit_loop(void*)
    }
    pthread_exit(NULL);
 }
+
+static void* sleep_thread(void * seconds)
+{
+ 	int * tsecs= (int * )seconds;
+	std::this_thread::sleep_for(std::chrono::milliseconds(*tsecs*1000));
+	break_loop=true;
+	pthread_exit(NULL);
+}
+
+int adc_mode(DRSBoard *b);
+int counter_mode(DRSBoard *b);
 int main()
 {
    int i, j, nBoards;
    DRS *drs;
    DRSBoard *b;
-   float time_array[4][1024];
+   drs = new DRS(); 			/* do initial scan */
+   for (int i=0 ; i<drs->GetNumberOfBoards() ; i++) 
+   {
+      b = drs->GetBoard(i);		/* show any found board(s) */
+      printf("Found DRS4 evaluation board, serial #%d, firmware revision %d\n", 
+      b->GetBoardSerialNumber(), b->GetFirmwareVersion());
+   }
+   
+   nBoards = drs->GetNumberOfBoards();
+   if (nBoards == 0) /* exit if no board found */
+   {
+      printf("No DRS4 evaluation board found\n");
+      return 0;
+   }
+   b = drs->GetBoard(0);		/* continue working with first board only */
+   b->Init();					/* initialize board */
+   b->SetFrequency(5, true);	/* set sampling frequency */
+   b->SetTranspMode(1);			/* enable transparent mode needed for analog trigger */
+   b->SetInputRange(0);			/* set input range to -0.5V ... +0.5V */
+
+   if (b->GetBoardType() >= 8) 
+   {           
+      b->EnableTrigger(1, 0);            	//enable hardware trigger
+   } 
+   else 
+   	{
+    	printf(" Old version of board found !! exiting ");
+    	return 0;
+   	}
+   	cout<<"\n Enter your choice : \n";
+   	cout<<"\t 1 -> ADC Mode \n";
+   	cout<<"\t 2 -> Counter Mode \n";
+   	cout<<"\t 0 -> Exit \n\t";
+   	cin>>i;
+   	
+	     if(i==3)	return 0;
+   	else if(i==1)	adc_mode(b);
+	else if(i==2)	counter_mode(b);
+   delete drs;
+	
+	return 0;
+}
+
+int counter_mode(DRSBoard *b)
+{
+	system("clear");
+	cout<<"\n COUNTER MODE \n";
+	int choice=-1;
+	unsigned int tsecs=100;
+	double trig_level_ch[4]={-30.0,-30.0,-30.0,-30.0};
+	unsigned long int scount=0,dcount=0,tcount=0,fcount=0;
+	cout<<"\n Enter the Trigger logic : "<<endl;
+	cout<<"1  -> "<<" Single Channel Trigger  [ ch 2 ]"<<endl;
+	cout<<"2  -> "<<" Two Fold Coincidance Counter  [ ch 2 AND ch 3 ]"<<endl;
+	cout<<"3  -> "<<" Three Fold Coincidance Counter  [ ch 2 AND ch 3  AND ch 4]"<<endl;
+	cout<<"4  -> "<<" Four Fold Coincidance Counter  [ ch 1 AND ch 2 AND ch 3  AND ch 4]"<<endl;
+	cout<<"0  -> "<<" Exit"<<endl;
+	cin>>choice;
+	unsigned int *tsleep=&tsecs;
+	switch(choice)
+	{
+		// Set trigger configuration
+      // OR  Bit0=CH1, Bit1=CH2,  Bit2=CH3,  Bit3=CH4,  Bit4=EXT
+      // AND Bit8=CH1, Bit9=CH2, Bit10=CH3, Bit11=CH4, Bit12=EXT
+      // TRANSP Bit15
+      	case 0 : return 0;
+		case 1 : 
+				{
+					cout<<"\n Enter the Trigger value for Channel 2 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[1];
+					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
+					//b->SetTriggerSource(0x0200);
+					b->SetTriggerSource(0x0010);
+				}
+				break;
+		case 2 : 
+				{
+					cout<<"\n Enter the Trigger value for Channel 2 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[1];
+					cout<<"\n Enter the Trigger value for Channel 3 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[2];
+					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
+					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
+					//b->SetTriggerSource(0x0E00);
+					b->SetTriggerSource(0x0010);        //Ext triger
+
+				}
+				break;
+		case 3 : 
+				{
+					cout<<"\n Enter the Trigger value for Channel 2 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[1];
+					cout<<"\n Enter the Trigger value for Channel 3 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[2];
+					cout<<"\n Enter the Trigger value for Channel 4 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[3];
+					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
+					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
+					b->SetIndividualTriggerLevel(4,trig_level_ch[3]/1000);
+					//b->SetTriggerSource(0x600);
+					b->SetTriggerSource(0x0010);        //Ext triger
+				}
+				break;
+		case 4 : 
+				{
+					cout<<"\n Enter the Trigger value for Channel 1 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[0];
+					cout<<"\n Enter the Trigger value for Channel 2 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[1];
+					cout<<"\n Enter the Trigger value for Channel 3 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[2];
+					cout<<"\n Enter the Trigger value for Channel 4 [in mV , with sign, falling edge ]  : ";
+					cin>>trig_level_ch[3];
+					b->SetIndividualTriggerLevel(1,trig_level_ch[0]/1000);
+					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
+					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
+					b->SetIndividualTriggerLevel(4,trig_level_ch[3]/1000);
+					//b->SetTriggerSource(0x0F00);
+					b->SetTriggerSource(0x0010);        //Ext triger
+					
+				}
+				break;
+		default :
+				{
+					cout<<"\n enter a valid choise !! \n";
+					return 1;
+				}
+		
+	}
+	
+	b->SetTriggerPolarity(true);        // false :positive edge
+	cout<<"\n Enter the counter duration in seconds\t: ";	cin>>tsecs;
+
+	//For exiting after n secs
+	 pthread_t tId;
+	 (void) pthread_create(&tId, 0, sleep_thread, (void *)tsleep);
+	 //For exiting on 'q' 
+	 pthread_t tId2;
+	 (void) pthread_create(&tId2, 0, exit_loop, 0);
+    
+     cout<<"\n The counter has started \n\n";
+	 while(!break_loop)
+	 {
+		b->StartDomino();
+		while (b->IsBusy());
+		scount++;
+		printf("\033[F \r Count = %d \n ",scount);
+	 }
+	cout<<"\n\n";
+
+}
+int adc_mode(DRSBoard *b)
+{
+	float time_array[4][1024];
    float wave_array[4][1024];
+  float trigger_level=-0.04;
+
    vector<double*> calib_data;
    int calib_channel[4]={0,1,2,3};
    int calib_channel_id=0;
@@ -86,19 +254,26 @@ int main()
    time_t curr_t,diff,etime;
    tm* elapsed_t ;
    char* dt=ctime(&start_t);
-   cout<<"\n Current time  = "<<dt;
+   
+   system("clear");
+   cout<<"\n\t\t\t ADC MODE \n";
+	cout<<" CONFIGURATION  : trigger : ch1 AND ch2 AND ch4 , TUT : ch3";
+   cout<<"\n\n\n\t\tCurrent time  : "<<dt;
 
 	save_waveform=true;
     cout<<"Enter the data run name \t:\t";
 			cin>>run_name;
+    cout<<"Enter the trigger level in mV  ( with sign )\t:\t";
+			cin>>trigger_level;
+			trigger_level/=1000;
 	 
    cout<<"Enter number of events to be recorded ( -1 for infinite loop ) : ";
    			cin>>event_counter;
   	if(event_counter == -1) 
   		infinite=true;
-  		
-   cout<<"Enter channenl of interest [1,2,3 or 4] : ";
-   			cin>>channel;
+   channel=3;	
+   cout<<"Enter channenl of interest [1,2,3 or 4] : "<<channel<<"\n";
+   			//cin>>channel;
    	if (channel<1 or channel>4)
    		{
    			cout<<"\n please enter a valid channel ID (1,2,3,4) !";
@@ -155,39 +330,7 @@ int main()
    }
    file.close();
 	system("clear");
-    drs = new DRS(); 			/* do initial scan */
-   
-   for (i=0 ; i<drs->GetNumberOfBoards() ; i++) 
-   {
-      b = drs->GetBoard(i);		/* show any found board(s) */
-      printf("Found DRS4 evaluation board, serial #%d, firmware revision %d\n", 
-      b->GetBoardSerialNumber(), b->GetFirmwareVersion());
-   }
-   
-   nBoards = drs->GetNumberOfBoards();
-   if (nBoards == 0) /* exit if no board found */
-   {
-      printf("No DRS4 evaluation board found\n");
-      return 0;
-   }
-   b = drs->GetBoard(0);		/* continue working with first board only */
-   b->Init();					/* initialize board */
-   b->SetFrequency(5, true);	/* set sampling frequency */
-   b->SetTranspMode(1);			/* enable transparent mode needed for analog trigger */
-   b->SetInputRange(0);			/* set input range to -0.5V ... +0.5V */
-
-   if (b->GetBoardType() >= 8) 
-   {           
-      b->EnableTrigger(1, 0);            	//enable hardware trigger
-      //b->SetTriggerSource(0x0B00);        	//AND Bit8=CH1, Bit9=CH2, Bit11=CH4 =>hex 0B00
-      b->SetTriggerSource(0x0010);
-   } 
-   else 
-   	{
-    	printf(" Old version of board found !! exiting ");
-    	return 0;
-   	}
-   	
+	cout<<"\n\t\t\t ADC MODE \n";
    	start_t = time(0);
 	dt=ctime(&start_t);
     cout<<"\nEvent Monitoring Stared at \t:\t   "<<dt;
@@ -202,15 +345,15 @@ int main()
  	else 
  		cout<<"\nNumber of events to be monitored :\t"<<event_counter;
  	cout<<"\nChannel to be integrated  : "<<channel+1<<"\n\n";
- 	cout<<"\nRemarks \t: \n";
+ 	cout<<"\nRemarks \t: \n\n";
  	temp_str="cat data/"+run_name+"/remarks.txt";
  	system(temp_str.c_str());
- 	cout<<"\n";
+	cout<<"\n\n\n";
 	
    	b->SetTriggerPolarity(true);        // false :positive edge
    
    double energy=0;	
-   float trigger_level=-0.04;
+
    b->SetIndividualTriggerLevel(0, trigger_level);
    b->SetIndividualTriggerLevel(1, trigger_level);
    b->SetIndividualTriggerLevel(3, trigger_level);
@@ -236,7 +379,7 @@ int main()
 			for (int j=0;j<1024;j++)
 				(*ditr)[j]*=1000;
 		}
-	cout<<"\n\n\n";
+	cout<<"\n\n";
 	 cout<<"\tCurrent time\t:\t"<<dt;
 	 diff=curr_t-start_t;
 	 elapsed_t = gmtime(&diff);
@@ -250,9 +393,6 @@ int main()
 		//For exiting on 'q' 
 		 pthread_t tId;
 		 (void) pthread_create(&tId, 0, exit_loop, 0);
-   
-
-   
    
    DRS_EVENT muEvent[1];
    
@@ -358,7 +498,6 @@ int main()
       printf("\rEvent ID  %d \t\t|\tcharge : %f  pC", eid,energy);
    }
    
-   delete drs;
    break_loop=true;
    (void) pthread_join(tId, NULL);
    	temp_str="data/"+run_name+"/remarks.txt";
@@ -380,9 +519,8 @@ int main()
    	event_str="chmod -R 777 data/"+run_name;
 	system(event_str.c_str());
 	cout<<"\n\n";
+	return 0;
 }
-
-
 
 double get_energy(float waveform[8][1024],float time[8][1024],int channel, double trigger_level,
 												double neg_offset,double integrate_window,double freq )
