@@ -52,6 +52,9 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel,
 
 
 static volatile bool break_loop = false;
+static volatile bool DEBUG_MODE = false;
+
+int system_return=0;
 
 static void* exit_loop(void*)
 {
@@ -78,7 +81,7 @@ int adc_mode(DRSBoard *b);
 int counter_mode(DRSBoard *b);
 int main()
 {
-   int i, j, nBoards;
+   int nBoards;
    DRS *drs;
    DRSBoard *b;
    drs = new DRS(); 			/* do initial scan */
@@ -110,15 +113,16 @@ int main()
     	printf(" Old version of board found !! exiting ");
     	return 0;
    	}
+   	int choice;
    	cout<<"\n Enter your choice : \n";
    	cout<<"\t 1 -> ADC Mode \n";
    	cout<<"\t 2 -> Counter Mode \n";
    	cout<<"\t 0 -> Exit \n\t";
-   	cin>>i;
+   	cin>>choice;
    	
-	     if(i==3)	return 0;
-   	else if(i==1)	adc_mode(b);
-	else if(i==2)	counter_mode(b);
+	     if(choice==3)	return 0;
+   	else if(choice==1)	adc_mode(b);
+	else if(choice==2)	counter_mode(b);
    delete drs;
 	
 	return 0;
@@ -126,12 +130,12 @@ int main()
 
 int counter_mode(DRSBoard *b)
 {
-	system("clear");
+	system_return=system("clear");
 	cout<<"\n COUNTER MODE \n";
 	int choice=-1;
 	unsigned int tsecs=100;
 	double trig_level_ch[4]={-30.0,-30.0,-30.0,-30.0};
-	unsigned long int scount=0,dcount=0,tcount=0,fcount=0;
+	unsigned long int scount=0,dcount=0;
 	cout<<"\n Enter the Trigger logic : "<<endl;
 	cout<<"1  -> "<<" Single Channel Trigger  [ ch 2 ]"<<endl;
 	cout<<"2  -> "<<" Two Fold Coincidance Counter  [ ch 2 AND ch 3 ]"<<endl;
@@ -139,6 +143,11 @@ int counter_mode(DRSBoard *b)
 	cout<<"4  -> "<<" Four Fold Coincidance Counter  [ ch 1 AND ch 2 AND ch 3  AND ch 4]"<<endl;
 	cout<<"0  -> "<<" Exit"<<endl;
 	cin>>choice;
+	if(choice<0) 
+	{
+		DEBUG_MODE=!DEBUG_MODE;
+		choice*=-1;
+	}
 	unsigned int *tsleep=&tsecs;
 	switch(choice)
 	{
@@ -152,8 +161,8 @@ int counter_mode(DRSBoard *b)
 					cout<<"\n Enter the Trigger value for Channel 2 [in mV , with sign, falling edge ]  : ";
 					cin>>trig_level_ch[1];
 					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
-					//b->SetTriggerSource(0x0200);
-					b->SetTriggerSource(0x0010);
+					b->SetTriggerSource(0x0200);
+					if (DEBUG_MODE) b->SetTriggerSource(0x0010);
 				}
 				break;
 		case 2 : 
@@ -164,8 +173,8 @@ int counter_mode(DRSBoard *b)
 					cin>>trig_level_ch[2];
 					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
 					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
-					//b->SetTriggerSource(0x0E00);
-					b->SetTriggerSource(0x0010);        //Ext triger
+					b->SetTriggerSource(0x0E00);
+					if (DEBUG_MODE) b->SetTriggerSource(0x0010);        //Ext triger
 
 				}
 				break;
@@ -180,8 +189,8 @@ int counter_mode(DRSBoard *b)
 					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
 					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
 					b->SetIndividualTriggerLevel(4,trig_level_ch[3]/1000);
-					//b->SetTriggerSource(0x600);
-					b->SetTriggerSource(0x0010);        //Ext triger
+					b->SetTriggerSource(0x600);
+					if (DEBUG_MODE) b->SetTriggerSource(0x0010);        //Ext triger
 				}
 				break;
 		case 4 : 
@@ -198,8 +207,8 @@ int counter_mode(DRSBoard *b)
 					b->SetIndividualTriggerLevel(2,trig_level_ch[1]/1000);
 					b->SetIndividualTriggerLevel(3,trig_level_ch[2]/1000);
 					b->SetIndividualTriggerLevel(4,trig_level_ch[3]/1000);
-					//b->SetTriggerSource(0x0F00);
-					b->SetTriggerSource(0x0010);        //Ext triger
+					b->SetTriggerSource(0x0F00);
+					if (DEBUG_MODE)  b->SetTriggerSource(0x0010);        //Ext triger
 					
 				}
 				break;
@@ -227,9 +236,10 @@ int counter_mode(DRSBoard *b)
 		b->StartDomino();
 		while (b->IsBusy());
 		scount++;
-		printf("\033[F \r Count = %d \n ",scount);
+		printf("\033[F \r Count = %lu \n ",scount);
 	 }
 	cout<<"\n\n";
+	return 0;
 
 }
 int adc_mode(DRSBoard *b)
@@ -244,7 +254,8 @@ int adc_mode(DRSBoard *b)
 
    fstream file;
    string run_name="atsrun",energy_str,event_str,temp_str;
-   int event_counter=500,channel=3,skip_evts=2;
+   unsigned long int event_counter=500;
+   int channel=3,skip_evts=2;
    bool infinite=false;
    bool save_waveform=false;
    int updates_stats_interval=UPADATE_STATS_INTERVAL;
@@ -255,7 +266,7 @@ int adc_mode(DRSBoard *b)
    tm* elapsed_t ;
    char* dt=ctime(&start_t);
    
-   system("clear");
+   system_return=system("clear");
    cout<<"\n\t\t\t ADC MODE \n";
 	cout<<" CONFIGURATION  : trigger : ch1 AND ch2 AND ch4 , TUT : ch3";
    cout<<"\n\n\n\t\tCurrent time  : "<<dt;
@@ -265,12 +276,21 @@ int adc_mode(DRSBoard *b)
 			cin>>run_name;
     cout<<"Enter the trigger level in mV  ( with sign )\t:\t";
 			cin>>trigger_level;
+								if(trigger_level==9999) // For debug mode
+								{
+									DEBUG_MODE=!DEBUG_MODE;
+									trigger_level=0.0;
+								}
 			trigger_level/=1000;
 	 
    cout<<"Enter number of events to be recorded ( -1 for infinite loop ) : ";
-   			cin>>event_counter;
-  	if(event_counter == -1) 
+   			cin>>event_rate;
+  	if(event_rate <=-1) 
   		infinite=true;
+  	else
+  		event_counter=event_rate;
+  	event_rate=0;
+  	
    channel=3;	
    cout<<"Enter channenl of interest [1,2,3 or 4] : "<<channel<<"\n";
    			//cin>>channel;
@@ -295,21 +315,21 @@ int adc_mode(DRSBoard *b)
 			}
 	char remark_option='n';
    	event_str="mkdir -p data/"+run_name;
-	system(event_str.c_str());
+	system_return=system(event_str.c_str());
 	event_str="chmod -R 777 data/"+run_name;
-	system(event_str.c_str());
+	system_return=system(event_str.c_str());
 	
 	cout<<"\n Do you want to enter any remarks [y/n] ?\t:\t";
 		cin>>remark_option;
 	if(remark_option=='y' or remark_option=='Y')
 		{
 			temp_str="nano data/"+run_name+"/remarks.txt";
-			system(temp_str.c_str());
+			system_return=system(temp_str.c_str());
 		}
 	else
 	{
 		temp_str="touch data/"+run_name+"/remarks.txt";
-		system(temp_str.c_str());
+		system_return=system(temp_str.c_str());
 	}
    
    energy_str="data/"+run_name+"/eDeposit.txt";
@@ -329,7 +349,7 @@ int adc_mode(DRSBoard *b)
       return 1;
    }
    file.close();
-	system("clear");
+	system_return=system("clear");
 	cout<<"\n\t\t\t ADC MODE \n";
    	start_t = time(0);
 	dt=ctime(&start_t);
@@ -347,7 +367,7 @@ int adc_mode(DRSBoard *b)
  	cout<<"\nChannel to be integrated  : "<<channel+1<<"\n\n";
  	cout<<"\nRemarks \t: \n\n";
  	temp_str="cat data/"+run_name+"/remarks.txt";
- 	system(temp_str.c_str());
+ 	system_return=system(temp_str.c_str());
 	cout<<"\n\n\n";
 	
    	b->SetTriggerPolarity(true);        // false :positive edge
@@ -358,8 +378,9 @@ int adc_mode(DRSBoard *b)
    b->SetIndividualTriggerLevel(1, trigger_level);
    b->SetIndividualTriggerLevel(3, trigger_level);
    
-   // b->SetTriggerSource(0xB00);  //For internal 3 forld coincidance
-   b->SetTriggerSource(0x0010);      //For external OR Trigger
+   b->SetTriggerSource(0xB00);  //For internal 3 forld coincidance
+   
+   if (DEBUG_MODE)  b->SetTriggerSource(0x0010);      //For external OR Trigger
    
    b->SetTriggerDelayNs(50);             // 50 ns trigger delay
    
@@ -379,7 +400,7 @@ int adc_mode(DRSBoard *b)
 			for (int j=0;j<1024;j++)
 				(*ditr)[j]*=1000;
 		}
-	cout<<"\n\n";
+	 cout<<"\n\n";
 	 cout<<"\tCurrent time\t:\t"<<dt;
 	 diff=curr_t-start_t;
 	 elapsed_t = gmtime(&diff);
@@ -495,7 +516,7 @@ int adc_mode(DRSBoard *b)
 	         cout<<"Rate of events = \t:\t"<<event_rate<<" / min \n";
 	   }
 	  printf("\r\t\t\t\t\t\t\t\t\t!!");
-      printf("\rEvent ID  %d \t\t|\tcharge : %f  pC", eid,energy);
+      printf("\rEvent ID  %lu \t\t|\tcharge : %f  pC", eid,energy);
    }
    
    break_loop=true;
@@ -517,7 +538,7 @@ int adc_mode(DRSBoard *b)
    	file<<"\n-------------------------------------------------\n";
    	
    	event_str="chmod -R 777 data/"+run_name;
-	system(event_str.c_str());
+	system_return=system(event_str.c_str());
 	cout<<"\n\n";
 	return 0;
 }
@@ -525,7 +546,7 @@ int adc_mode(DRSBoard *b)
 double get_energy(float waveform[8][1024],float time[8][1024],int channel, double trigger_level,
 												double neg_offset,double integrate_window,double freq )
 {
-	int start=0,end=1024;
+	int start=0;
 	double integral=0;
 	int i;
 	for(i=0;i<1024;i++)
