@@ -66,8 +66,7 @@ int do_offset_caliberation(string ofile,string configfile)
 			if(start > 40) break;
 			cout<<"\t\t for event ids  "<<start<<" to "<<start+EVENTS_IN_A_FRAME-1<<"\n";
 			fstatus=get_events(ocalib_files[i].c_str(),waveform,start,start+EVENTS_IN_A_FRAME-1);
-//			cin>>wpos;
-			for(int j=0;j<EVENTS_IN_A_FRAME;j++)
+ 			for(int j=0;j<EVENTS_IN_A_FRAME;j++)
 			{	
 				wpos=j*(1024*2*4)+i*(1024*2);
 				/*for(int k=0;k<1024;k++)
@@ -129,6 +128,62 @@ int do_offset_caliberation(string ofile,string configfile)
 }
 
 
+int get_event_adcSave(const char * fname,double * waveformOUT,int start_eventID,int end_evetID)
+{
+	DRS_EVENT  anevent;
+	//EHEADER anevent.eheader;
+	int channels;
+	float * db_buffr_t,* db_buffr_w;
+	
+	fstream ifile;
+	fstream ofile;
+	ifile.open(fname,ios::in | ios::binary);
+	ofile.open("log",ios::out);
+	if(!ifile.is_open())
+	{
+		fprintf(stderr,"\n ERROR HAPPEND !! FILE DOES NOT EXIST !! \n");
+		fprintf(stderr,"fname : ");
+		return -1;
+	}
+	int id=start_eventID;
+	int waveform_id=0;
+	ifile.seekg(0,ios_base::end);
+	int y=ifile.tellg();
+	ofile<<y<<"\n";
+	ofile<<start_eventID*EVENT_SIZE_BYTES_4channelADC <<"\n";
+	if(start_eventID*EVENT_SIZE_BYTES_4channelADC >= y)
+		return -2;
+	ofile.close();
+	ifile.seekg(start_eventID*EVENT_SIZE_BYTES_4channelADC,ios_base::beg);
+	ifile.read((char *)(&anevent.eheader),sizeof(anevent.eheader));
+	while(!ifile.eof() and id<end_evetID)
+	{
+		id++;
+		ifile.read((char *)(&channels),sizeof(channels));
+		anevent.waveform.clear();
+		anevent.time.clear();
+		for( int i=0;i<channels;i++)
+		{
+			db_buffr_t=new float[1024];
+			ifile.read((char *)(db_buffr_t),1024*sizeof(float));
+			anevent.time.push_back(db_buffr_t);
+			db_buffr_w=new float[1024];
+			ifile.read((char *)(db_buffr_w),1024*sizeof(float));
+			anevent.waveform.push_back(db_buffr_w);
+			for(int j=0;j<1024;j++)
+			{
+				waveformOUT[waveform_id++]=db_buffr_t[j];
+				waveformOUT[waveform_id++]=db_buffr_w[j];
+			}
+		}
+		ifile.read((char *)(&anevent.eheader),sizeof(anevent.eheader));
+	}
+	ifile.close();
+	if (id<end_evetID) return id;
+	
+	return 0;
+}
+
 int get_events(const char * fname,double * waveformOUT,int start_eventID,int end_evetID,bool offset_caliberate)
 {
    FHEADER  fh;
@@ -137,9 +192,6 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
    EHEADER  eh;
    TCHEADER tch;
    CHEADER  ch;
-   waveformOUT[0]=10;
-   waveformOUT[1]=start_eventID;
-   waveformOUT[2]=end_evetID;
    unsigned int scaler;
    unsigned short voltage[1024];
    double waveform[16][4][1024], time[16][4][1024];
@@ -215,7 +267,6 @@ int get_events(const char * fname,double * waveformOUT,int start_eventID,int end
   // loop over all events in the data file
    
    int waveWrite_pos=0;   
-   waveformOUT[5]=-1;
 	
 	int start_offset=start_eventID*EVENT_SIZE_BYTES;
 	int seekStatus=fseek(f,start_offset,SEEK_CUR);
@@ -339,7 +390,7 @@ int save_event_binary(const char * fname,DRS_EVENT anevent[],int num_events)
 		ofile.write((char *)(&anevent[j].eheader),sizeof(anevent[j].eheader));
 		ofile.write((char *)(&channels),sizeof(channels));
 		//cout<<" chn = "<<channels<<"\n";
-		for(unsigned int i=0;i<channels;i++)
+		for( int i=0;i<channels;i++)
 		{
 			ofile.write((char *)(anevent[j].time[i]),1024*sizeof(anevent[j].time[i][0]));
 			ofile.write((char *)(anevent[j].waveform[i]),1024*sizeof(anevent[j].waveform[i][0]));
@@ -383,7 +434,7 @@ vector<DRS_EVENT> read_event_binary(const char * fname)
 		
 		anevent.waveform.clear();
 		anevent.time.clear();
-		for(unsigned int i=0;i<channels;i++)
+		for( int i=0;i<channels;i++)
 		{
 			db_buffr=new float[1024];
 			ifile.read((char *)(db_buffr),1024*sizeof(float));
@@ -398,13 +449,16 @@ vector<DRS_EVENT> read_event_binary(const char * fname)
 	ifile.close();
 	return eventList;
 }
+
+
+
 int get_channel_offsets(string fname,vector<double *> *calib_data,int channels[])
 {
 	fstream ifile;
 	int ch;
 	double *db_buffr;
 	calib_data->clear();
-	int idx=0;int t;
+	int idx=0;
 	ifile.open(fname.c_str(),ios::in | ios::binary);
 	if(!ifile.is_open())
 	{
@@ -423,3 +477,45 @@ int get_channel_offsets(string fname,vector<double *> *calib_data,int channels[]
 	}
 	return 0;
 }
+
+
+
+
+double get_energy(float waveform[8][1024],float time[8][1024],int channel, double trigger_level,
+												double neg_offset,double integrate_window,double freq )
+{
+	int start=0;
+	double integral=0;
+	int i;
+	for(i=0;i<1024;i++)
+	{
+		if(waveform[channel][i]<trigger_level)
+			{
+				start=i;
+				break;
+			}
+	}
+	while(i>0)
+	{
+		if(time[channel][start]-time[channel][i] > neg_offset)
+			{
+				start=i;
+				break;
+			}
+		i--;
+	}
+	if (start<1) start=1;
+	
+	i=start;
+	double dt=0,window=0;
+	while(i<1024 and window<integrate_window)
+	{
+		dt=time[channel][i]-time[channel][i-1];
+		window+=dt;
+		integral+=waveform[channel][i]*dt;
+		i++;
+	}
+//	printf("!! %d , %d  ,%d \n",start,i,int(TERMINAL_RESISTANCE));
+	return -1*integral/TERMINAL_RESISTANCE;
+}
+

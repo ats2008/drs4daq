@@ -7,6 +7,15 @@
 #
 ########################################################
 
+IDIR=include
+SRCDIR=src
+OBJDIR=obj
+SLIBDIR=lib
+
+CXX=gcc
+
+CFLAGS=-I $(IDIR)/ -Wall 
+
 # check if wxWidgets is installed
 HAVE_WX       = $(shell which wx-config)
 ifeq ($(HAVE_WX),)
@@ -21,90 +30,62 @@ else
 DOS           = OS_LINUX
 endif
 
-CFLAGS        = -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -D$(DOS) -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX
-LIBS          = -lpthread -lutil -lusb-1.0
+CFLAGS        += -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -D$(DOS) -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX
+LIBS          = -lpthread -lutil -lusb-1.0 -lstdc++ -lm
 
 ifeq ($(OS),Darwin)
 CFLAGS        += -stdlib=libstdc++
 endif         
 
+
 # wxWidgets libs and flags
 WXLIBS        = $(shell wx-config --libs)
 WXFLAGS       = $(shell wx-config --cxxflags)
 
-CPP_OBJ       = DRS.o averager.o ConfigDialog.o DOFrame.o DOScreen.o DRSOsc.o MeasureDialog.o Measurement.o Osci.o InfoDialog.o DisplayDialog.o AboutDialog.o EPThread.o TriggerDialog.o rb.o
-OBJECTS       = musbstd.o mxml.o strlcpy.o
+_CPP_OBJ       = DRS.o averager.o 
+_OBJECTS       = musbstd.o mxml.o strlcpy.o
+CPP_OBJ  := $(_CPP_OBJ:%.o=$(OBJDIR)/%.o)
+OBJECTS  := $(_OBJECTS:%.o=$(OBJDIR)/%.o)
 
+see:
+	echo $(CPP_OBJ) $(OBJECTS)
 
 ifeq ($(OS),Darwin)
-all: drsosc drscl drs_exam muonDet drs_exam_multi drsinface DRSOsc.app
+all: drs_exam muonDet
 else
-all: drsosc drscl drs_exam muonDet drs_exam_multi drsinface
+all: muonDet drs_exam
 endif
 
-DRSOsc.app: drsosc
-	-mkdir DRSOsc.app
-	-mkdir DRSOsc.app/Contents
-	-mkdir DRSOsc.app/Contents/MacOS
-	-mkdir DRSOsc.app/Contents/Resources
-	-mkdir DRSOsc.app/Contents/Resources/English.lproj
-	echo 'APPL????' > DRSOsc.app/Contents/PkgInfo
-	cp Info.plist DRSOsc.app/Contents/Info.plist
-	cp DRSOsc.icns DRSOsc.app/Contents/Resources
-	cp drsosc DRSOsc.app/Contents/MacOS/DRSOsc
+drs_exam: $(OBJECTS) $(OBJDIR)/drs_exam.o
+	$(CXX) $(CFLAGS) $^ -o drs_exam $(LIBS) $(WXLIBS)
 
+muonDet: $(OBJECTS) $(CPP_OBJ) $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/muonDet.o 
+	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) $(WXLIBS)
 
-drsosc: $(OBJECTS) $(CPP_OBJ) main.o
-	$(CXX) $(CFLAGS) $(OBJECTS) $(CPP_OBJ) main.o -o drsosc $(LIBS) $(WXLIBS)
+try: $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/try.o 
+	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) 
 
-drsinface: $(OBJECTS) DRS.o averager.o drsinface.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o drsinface.o -o drsinface $(LIBS) $(WXLIBS)
+libdrs4: $(SRCDIR)/DRS4v5_lib.cpp
+	$(CC) -shared -fPIC -o $(SLIBDIR)/$@.so  $^ $(CFLAGS) $(LIBS)
 
-drscl: $(OBJECTS) DRS.o averager.o drscl.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o drscl.o -o drscl $(LIBS) $(WXLIBS)
+$(OBJDIR)/drs_exam.o: $(SRCDIR)/drs_exam.cpp $(IDIR)/mxml.h $(IDIR)/DRS.h
+	$(CXX) $(CFLAGS) -c $< -o $@ 
 
-drs_exam: $(OBJECTS) DRS.o averager.o drs_exam.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o drs_exam.o -o drs_exam $(LIBS) $(WXLIBS)
+$(OBJDIR)/muonDet.o: $(SRCDIR)/muonDet.cpp $(IDIR)/mxml.h $(IDIR)/DRS.h
+	$(CXX) $(CFLAGS) -c $< -o $@ 
 
-muonDet: $(OBJECTS) DRS.o averager.o muonDet.o DRS4v5_lib.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o muonDet.o -o muonDet DRS4v5_lib.o $(LIBS) $(WXLIBS)
+$(OBJDIR)/try.o: $(SRCDIR)/try.cpp $(SRCDIR)/DRS4v5_lib.cpp $(IDIR)/DRS4v5_lib.h $(IDIR)/drsoscBinary.h
+	$(CXX) $(CFLAGS) -c $< -o $@
 
-try: DRS4v5_lib.o try.o 
-	$(CXX) $(CFLAGS)  DRS4v5_lib.o try.o -o try $(LIBS) 
+$(OBJDIR)/DRS4v5_lib.o: $(SRCDIR)/DRS4v5_lib.cpp $(IDIR)/DRS4v5_lib.h $(IDIR)/drsoscBinary.h
+	$(CXX) $(CFLAGS) -c $< -o $@ 
 
-drs_exam_multi: $(OBJECTS) DRS.o averager.o drs_exam_multi.o
-	$(CXX) $(CFLAGS) $(OBJECTS) DRS.o averager.o drs_exam_multi.o -o drs_exam_multi $(LIBS) $(WXLIBS)
+$(CPP_OBJ):$(OBJDIR)/%.o: $(SRCDIR)/%.cpp 
+	$(CXX) $(CFLAGS) $(WXFLAGS) -c $< -o $@ 
 
-main.o: src/main.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) $(WXFLAGS) -c $<
-
-drsinface.o: src/drsinface.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) -c $<
-
-drscl.o: src/drscl.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) -c $<
-
-drs_exam.o: src/drs_exam.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) -c $<
-
-muonDet.o: src/muonDet.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) -c $<
-
-try.o: src/try.cpp src/DRS4v5_lib.cpp include/DRS4v5_lib.h include/drsoscBinary.h
-	$(CXX) $(CFLAGS) -c $<
-
-DRS4v5_lib.o: src/DRS4v5_lib.cpp include/DRS4v5_lib.h include/drsoscBinary.h
-	$(CXX) $(CFLAGS) -c $<
-
-drs_exam_multi.o: src/drs_exam_multi.cpp include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) -c $<
-
-$(CPP_OBJ): %.o: src/%.cpp include/%.h include/mxml.h include/DRS.h
-	$(CXX) $(CFLAGS) $(WXFLAGS) -c $<
-
-$(OBJECTS): %.o: src/%.c include/mxml.h include/DRS.h
-	$(CC) $(CFLAGS) -c $<
+$(OBJECTS):$(OBJDIR)/%.o: $(SRCDIR)/%.c 
+	$(CC) $(CFLAGS) -c $< -o $@ 
 
 clean:
-	rm -f *.o drscl drsosc
+	rm -f *.o obj/*.o drs_exam muonDet try 
 

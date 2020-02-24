@@ -10,6 +10,8 @@
 
 #include <drsoscBinary.h>
 
+#define EVENT_SIZE_BYTES_4channelADC 32796
+
 #define EVENTS_IN_A_FRAME 50
 
 #define TERMINAL_RESISTANCE 50
@@ -41,11 +43,14 @@ class DRS_EVENT
 
 
 int get_events( const char * fname="",double * waveformOUT=NULL,int start_eventID=0,int end_evetID=-1,bool offset_caliberate=false) asm ("get_events");
+int get_event_adcSave(const char * fname,double * waveformOUT,int start_eventID=0,int end_evetID=-1) asm ("get_event_adcSave") ;
 
 int do_offset_caliberation(string ofile="config/offset_cofig.dat",string configfile="drsosc.config");
 
 int get_channel_offsets(string ofile="calib/offset_calib.dat",vector<double *> *calib_data =NULL,int channels[]=NULL);
 
 int save_event_binary(const char * fname,DRS_EVENT events[], int event_count);
-
 vector<DRS_EVENT> read_event_binary(const char * fname);
+
+double get_energy(float waveform[8][1024],float time[8][1024],int channel,
+						double trigger_level=-40.0,double neg_offset=20,double integrate_window=100, double freq =5.12);

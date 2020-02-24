@@ -27,6 +27,18 @@ def find_peak(array,window=10):
     return peaks,peak_vals
 
 ename=sys.argv[1]
+if len(sys.argv) >2:
+	hstart=float(sys.argv[2])
+	hend=float(sys.argv[3])
+else:
+	hstart=-10
+	hend=180
+	
+if len(sys.argv) >3:
+	nbins=int(sys.argv[4])
+else:
+	nbins=220
+	
 print(" the run name : ",ename)
 fname="data/"+ename+"/eDeposit.txt"
 try :
@@ -47,8 +59,8 @@ eid=np.array(eid)
 energy=np.array(energy)
 
 fig,ax=plt.subplots(nrows=1,ncols=2,figsize=(18,6))
-x=ax[0].hist(energy,bins=200)
-xl=ax[1].hist(energy,bins=200)
+x=ax[0].hist(energy,bins=nbins,range=(hstart,hend))
+xl=ax[1].hist(energy,bins=nbins,range=(hstart,hend))
 ax[0].set_title("Histogram of charge deposited on ADC")
 ax[1].set_title("Histogram of log(charge) deposited on ADC")
 ax[0].set_xlabel("charge depositrd in pC")
@@ -58,7 +70,6 @@ ax[1].set_yscale('log')
 xhere=(x[1][:-1]+x[1][1:])/2
 yhere=x[0]
 pk,pkv=find_peak(yhere,20)
-plt.savefig('data/'+ename+'/'+'hist.png',dpi=400)
 f=open('data/'+ename+'/'+'peaks.txt','w')
 f.write("#peaks \n#energy,count\n")
 print("\t    peaks \n\tenergy\tcount")
@@ -69,10 +80,10 @@ print("peaks saved at ",'data/'+ename+'/'+'peaks.txt')
 print("histogram saved at ",'data/'+ename+'/'+'hist.png')
 f.close()
 pkx=xhere[pk]
-ax[0].scatter(pkx,pkv,s=40,c='r',label='identifed peaks')
-ax[1].scatter(pkx,pkv,s=40,c='r',label='identifed peaks')
+ax[0].scatter(pkx,pkv,s=40,c='r',label='identifed peaks',zorder=5)
+ax[1].scatter(pkx,pkv,s=40,c='r',label='identifed peaks',zorder=5)
 ax[0].annotate('Total # Events = '+str(len(energy)), xy=(0.6, 0.5), xycoords='axes fraction')
 ax[1].annotate('Total # Events = '+str(len(energy)), xy=(0.6, 0.5), xycoords='axes fraction')
 ax[0].legend()
-
+plt.savefig('data/'+ename+'/'+'hist.png',dpi=400)
 plt.show()

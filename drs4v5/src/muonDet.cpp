@@ -1,12 +1,9 @@
 /********************************************************************\
 
-  Name:         drs_exam.cpp
-  Created by:   Stefan Ritt
+  Name:         muonDet.cpp
 
-  Contents:     Simple example application to read out a DRS4
-                evaluation board
-
-  $Id: drs_exam.cpp 21308 2014-04-11 14:50:16Z ritt $
+  Contents:     Simple application to read out a DRS4 board
+  				and integrate peaks to get the charge
 
 \********************************************************************/
 
@@ -45,10 +42,6 @@
 /*------------------------------------------------------------------*/
 
 
-
-
-double get_energy(float waveform[8][1024],float time[8][1024],int channel,
-						double trigger_level=-40.0,double neg_offset=20,double integrate_window=100, double freq =5.12);
 
 
 static volatile bool break_loop = false;
@@ -542,42 +535,3 @@ int adc_mode(DRSBoard *b)
 	cout<<"\n\n";
 	return 0;
 }
-
-double get_energy(float waveform[8][1024],float time[8][1024],int channel, double trigger_level,
-												double neg_offset,double integrate_window,double freq )
-{
-	int start=0;
-	double integral=0;
-	int i;
-	for(i=0;i<1024;i++)
-	{
-		if(waveform[channel][i]<trigger_level)
-			{
-				start=i;
-				break;
-			}
-	}
-	while(i>0)
-	{
-		if(time[channel][start]-time[channel][i] > neg_offset)
-			{
-				start=i;
-				break;
-			}
-		i--;
-	}
-	if (start<1) start=1;
-	
-	i=start;
-	double dt=0,window=0;
-	while(i<1024 and window<integrate_window)
-	{
-		dt=time[channel][i]-time[channel][i-1];
-		window+=dt;
-		integral+=waveform[channel][i]*dt;
-		i++;
-	}
-//	printf("!! %d , %d  ,%d \n",start,i,int(TERMINAL_RESISTANCE));
-	return -1*integral/TERMINAL_RESISTANCE;
-}
-
