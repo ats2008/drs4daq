@@ -482,14 +482,18 @@ int get_channel_offsets(string fname,vector<double *> *calib_data,int channels[]
 
 
 double get_energy(float waveform[8][1024],float time[8][1024],int channel, double trigger_level,
-												double neg_offset,double integrate_window,double freq )
+												double neg_offset,double integrate_window,double freq, bool falling_edge )
 {
+	float trig_sign=1;
+	if(!falling_edge) trig_sign=-1;
 	int start=0;
 	double integral=0;
 	int i;
+	i=0;
+	double dt=0,window=0;
 	for(i=0;i<1024;i++)
 	{
-		if(waveform[channel][i]<trigger_level)
+		if(trig_sign*waveform[channel][i]<trig_sign*trigger_level)
 			{
 				start=i;
 				break;
@@ -505,9 +509,10 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel, doubl
 		i--;
 	}
 	if (start<1) start=1;
-	
+
 	i=start;
-	double dt=0,window=0;
+	dt=0;
+	window=0;
 	while(i<1024 and window<integrate_window)
 	{
 		dt=time[channel][i]-time[channel][i-1];
@@ -515,7 +520,6 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel, doubl
 		integral+=waveform[channel][i]*dt;
 		i++;
 	}
-//	printf("!! %d , %d  ,%d \n",start,i,int(TERMINAL_RESISTANCE));
 	return -1*integral/TERMINAL_RESISTANCE;
 }
 

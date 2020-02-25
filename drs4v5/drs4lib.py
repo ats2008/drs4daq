@@ -50,3 +50,22 @@ def get_adc_events(fname=None,start_eventID=0,end_evetID=0):
     waveformData=np.ctypeslib.as_array(_waveformData)
     waveformData=waveformData.reshape((end_evetID-start_eventID+1),4,1024,2)
     return status,waveformData
+    
+
+get_energy_c=drs4lib.get_energy
+get_energy_c.restype=c_double
+
+def get_energy(waveform,tme,channel,trigger_level,neg_offset,integrate_window,frequency,falling_edge):
+	wf=np.ctypeslib.as_ctypes(waveform.astype(c_float))
+	tm=np.ctypeslib.as_ctypes(tme.astype(c_float))
+	ch=c_int(channel)
+	trig=c_double(trigger_level)
+	n_off=c_double(neg_offset)
+	i_window=c_double(integrate_window)
+	freq=c_double(frequency)
+	f_edge=c_bool(falling_edge)
+	
+	en=get_energy_c(wf,tm,ch,trig,n_off,i_window,freq,f_edge)
+	return en
+
+

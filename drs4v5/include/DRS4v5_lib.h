@@ -53,4 +53,5 @@ int save_event_binary(const char * fname,DRS_EVENT events[], int event_count);
 vector<DRS_EVENT> read_event_binary(const char * fname);
 
 double get_energy(float waveform[8][1024],float time[8][1024],int channel,
-						double trigger_level=-40.0,double neg_offset=20,double integrate_window=100, double freq =5.12);
+						double trigger_level=-40.0,double neg_offset=20,double integrate_window=100, double freq =5.12,
+									bool falling_edge=true) asm("get_energy");

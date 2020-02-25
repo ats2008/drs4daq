@@ -87,5 +87,5 @@ $(OBJECTS):$(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@ 
 
 clean:
-	rm -f *.o obj/*.o drs_exam muonDet try 
+	rm -f *.o obj/*.o lib/*.so drs_exam muonDet try 
 
