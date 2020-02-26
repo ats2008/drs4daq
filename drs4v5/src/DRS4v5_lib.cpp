@@ -136,9 +136,7 @@ int get_event_adcSave(const char * fname,double * waveformOUT,int start_eventID,
 	float * db_buffr_t,* db_buffr_w;
 	
 	fstream ifile;
-	fstream ofile;
 	ifile.open(fname,ios::in | ios::binary);
-	ofile.open("log",ios::out);
 	if(!ifile.is_open())
 	{
 		fprintf(stderr,"\n ERROR HAPPEND !! FILE DOES NOT EXIST !! \n");
@@ -149,11 +147,8 @@ int get_event_adcSave(const char * fname,double * waveformOUT,int start_eventID,
 	int waveform_id=0;
 	ifile.seekg(0,ios_base::end);
 	int y=ifile.tellg();
-	ofile<<y<<"\n";
-	ofile<<start_eventID*EVENT_SIZE_BYTES_4channelADC <<"\n";
 	if(start_eventID*EVENT_SIZE_BYTES_4channelADC >= y)
 		return -2;
-	ofile.close();
 	ifile.seekg(start_eventID*EVENT_SIZE_BYTES_4channelADC,ios_base::beg);
 	ifile.read((char *)(&anevent.eheader),sizeof(anevent.eheader));
 	while(!ifile.eof() and id<end_evetID)
