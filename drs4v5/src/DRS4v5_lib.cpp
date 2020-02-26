@@ -499,6 +499,10 @@ double get_energy(float waveform[8][1024],float time[8][1024],int channel, doubl
 				break;
 			}
 	}
+	if(i==1024)
+	{
+		return 0.0;
+	}
 	while(i>0)
 	{
 		if(time[channel][start]-time[channel][i] > neg_offset)
