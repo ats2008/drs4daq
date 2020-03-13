@@ -391,8 +391,8 @@ int adc_mode(DRSBoard *b)
  	system_return=system(temp_str.c_str());
 	cout<<"\n\n\n";
 	
-//   	b->SetTriggerPolarity(true) ;        // true :negative edge
-   	b->SetTriggerPolarity(false);        // false :positive edge
+    b->SetTriggerPolarity(true) ;        // true :negative edge
+//  b->SetTriggerPolarity(false);        // false :positive edge
    
    double energy=0;	
 
@@ -403,13 +403,13 @@ int adc_mode(DRSBoard *b)
   // OR  Bit0=CH1, Bit1=CH2,  Bit2=CH3,  Bit3=CH4,  Bit4=EXT
   // AND Bit8=CH1, Bit9=CH2, Bit10=CH3, Bit11=CH4, Bit12=EXT
   
-//   b->SetIndividualTriggerLevel(2, trigger_level);
-//   b->SetTriggerSource(0x400);  //For internal AND at ch3
- 
    b->SetTriggerSource(0xB00);  //For internal 3 fold coincidance
    
-   if (DEBUG_MODE)  b->SetTriggerSource(0x0010);      //For external OR Trigger
-   
+   if (DEBUG_MODE)  
+   {
+   	cout<<"\n in DEBUG_MODE .. setting ext trigg source\n";
+	   b->SetTriggerSource(0x0010);      //For external OR Trigger
+   }
    b->SetTriggerDelayNs(50);             // 50 ns trigger delay
    
    
@@ -462,6 +462,8 @@ int adc_mode(DRSBoard *b)
 	
 	// Histograms for online plotting
 	TH1D* qADC = new TH1D("qADC", "Signal Integral", 257, -1, 256); 
+	TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);
+	
 	// EVENT LOOP
 	
    while( (infinite or (event_counter>eid)) and !break_loop) 
@@ -518,7 +520,7 @@ int adc_mode(DRSBoard *b)
 			}
       }
       
-	 //double get_energy(float waveform[8][1024],int channel, double trigger_level,double neg_offset,double integrate_window,double freq )
+	 //double get_energy(float waveform[8][102TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);4],int channel, double trigger_level,double neg_offset,double integrate_window,double freq )
       
       energy=get_energy(wave_array,time_array, channel, -40,10,50,5.12);
       qADC->Fill(energy);
