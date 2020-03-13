@@ -25,6 +25,33 @@
 #define DIR_SEPARATOR '/'
 #endif
 
+/*cern root libs*/
+#include<climits>
+#include "TFile.h"
+#include "TTree.h"
+#include "TH1.h"
+#include "TPad.h"
+#include "TCanvas.h"
+#include "TH1F.h"
+#include "TGraphErrors.h"
+#include "TF1.h"
+#include "TH2.h"
+#include "TProfile.h"
+
+#include "TStyle.h"
+#include "TAttFill.h"
+#include "TPaveStats.h"
+#include "TMinuit.h"
+#include "TPostScript.h"
+#include "TFitResult.h"
+#include "TFitResultPtr.h"
+#include "TRandom.h"
+#include "TPaletteAxis.h"
+#include "TLegend.h"
+#include "TLatex.h"
+#include "TMath.h"
+
+/* std cpp libs*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,9 +59,10 @@
 #include <pthread.h>
 #include <chrono>
 #include <thread>
-
-#include "strlcpy.h"
 #include <fstream>
+
+/*  DRS4v5 libs*/
+#include "strlcpy.h"
 #include "DRS.h"
 #include <DRS4v5_lib.h>
 
@@ -72,6 +100,7 @@ static void* sleep_thread(void * seconds)
 
 int adc_mode(DRSBoard *b);
 int counter_mode(DRSBoard *b);
+
 int main()
 {
    int nBoards;
@@ -237,9 +266,9 @@ int counter_mode(DRSBoard *b)
 }
 int adc_mode(DRSBoard *b)
 {
-	float time_array[4][1024];
-   float wave_array[4][1024];
-  float trigger_level=-0.04;
+    float time_array[4][1024];
+    float wave_array[4][1024];
+    float trigger_level=-0.04;
 
    vector<double*> calib_data;
    int calib_channel[4]={0,1,2,3};
@@ -265,8 +294,7 @@ int adc_mode(DRSBoard *b)
    cout<<"\n\n\n\t\tCurrent time  : "<<dt;
 
 	save_waveform=true;
-    cout<<"Enter the data run name \t:\t";
-			cin>>run_name;
+   cout<<"Enter the data run name \t:\t";   cin>>run_name;
     cout<<"Enter the trigger level in mV  ( with sign )\t:\t";
 			cin>>trigger_level;
 								if(trigger_level==9999) // For debug mode
@@ -288,7 +316,7 @@ int adc_mode(DRSBoard *b)
    cout<<"Enter channenl of interest [1,2,3 or 4] : "<<channel<<"\n";
    			//cin>>channel;
    	if (channel<1 or channel>4)
-   		{
+   		{  TH1F* histadc = new TH1F("histadc", "histadc", 512, -0.125, 511.125);
    			cout<<"\n please enter a valid channel ID (1,2,3,4) !";
    			return 1;
    		}
@@ -320,7 +348,7 @@ int adc_mode(DRSBoard *b)
 			system_return=system(temp_str.c_str());
 		}
 	else
-	{
+	{ 
 		temp_str="touch data/"+run_name+"/remarks.txt";
 		system_return=system(temp_str.c_str());
 	}
@@ -431,11 +459,15 @@ int adc_mode(DRSBoard *b)
 	muEvent[0].eheader.millisecond=0;
 	muEvent[0].eheader.range=0;
 	int save_to_disc_count=0;
+	
+	// Histograms for online plotting
+	TH1D* qADC = new TH1D("qADC", "Signal Integral", 257, -1, 256); 
+	// EVENT LOOP
+	
    while( (infinite or (event_counter>eid)) and !break_loop) 
    {
 	  eid++;
       b->StartDomino();							/* start board (activate domino wave) */
-     // printf("\nWaiting for trigger...");		/* wait for trigger */
       fflush(stdout);
       while (b->IsBusy());
 
@@ -489,6 +521,8 @@ int adc_mode(DRSBoard *b)
 	 //double get_energy(float waveform[8][1024],int channel, double trigger_level,double neg_offset,double integrate_window,double freq )
       
       energy=get_energy(wave_array,time_array, channel, -40,10,50,5.12);
+      qADC->Fill(energy);
+      
 	  file.open(energy_str.c_str(), ios::out | ios::app);
 	  temp_str=to_string(eid)+","+to_string(energy)+"\n";
       file<<temp_str;
@@ -514,6 +548,7 @@ int adc_mode(DRSBoard *b)
 	         cout<<elapsed_t->tm_sec<<"sec "<<"\n";
 	         cout<<"Total Number of Events\t:\t"<<eid<<endl;
 	         cout<<"Rate of events = \t:\t"<<event_rate<<" / min \n";
+	         qADC->Draw();
 	   }
 	  printf("\r\t\t\t\t\t\t\t\t\t!!");
       printf("\rEvent ID  %lu \t\t|\tcharge : %f  pC", eid,energy);
