@@ -14,7 +14,7 @@ SLIBDIR=lib
 
 CXX=gcc
 
-CFLAGS=-I $(IDIR)/ -Wall -I $(ROOTSYS)/include  -L/home/hcal/root/lib 
+CFLAGS=-I $(IDIR)/ -Wall -I $(ROOTSYS)/include  -L$(ROOTSYS)/lib 
 
 
 # check if wxWidgets is installed
@@ -32,7 +32,8 @@ DOS           = OS_LINUX
 endif
 
 CFLAGS        += -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -D$(DOS) -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX
-LIBS          = -lpthread -lutil -lusb-1.0 -lstdc++ -lm -lGui -lCore -lImt -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lROOTVecOps -lTree -lTreePlayer -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -lROOTDataFrame -pthread -lm -ldl -rdynamic 
+LIBS          = -lpthread -lutil -lusb-1.0 -lstdc++ -lm -lGui -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -pthread -lm -ldl -rdynamic
+
 
 ifeq ($(OS),Darwin)
 CFLAGS        += -stdlib=libstdc++
