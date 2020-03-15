@@ -291,7 +291,7 @@ int adc_mode(DRSBoard *b)
    bool infinite=false;
    bool save_waveform=false;
    int updates_stats_interval=UPADATE_STATS_INTERVAL;
-   int updates_Fit_interval=UPADATE_STATS_INTERVAL*10;
+   int updates_Fit_interval=UPADATE_STATS_INTERVAL*50;
    int event_rate;
    
    time_t start_t = time(0);
@@ -484,7 +484,7 @@ int adc_mode(DRSBoard *b)
     pary[5]=20.0;// Landau_Norm
     pary[6]=8;// Landau_Gausian_Width
     fity->SetParameters(pary);
-    TFitResultPtr FitRsltPtr;
+    TFitResultPtr FitRsltPtr(0);
 	// Histograms for online plotting 
 	TH1D* qADC = new TH1D("qADC", "Signal Integral", 257, -1, 256); 
 	TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);
@@ -494,7 +494,8 @@ int adc_mode(DRSBoard *b)
     gStyle->SetOptFit(1111);
 
     temp_str="data/"+run_name+"/qDep.png";
-    FitRsltPtr = qADC->Fit(fity, "QBMS");
+    //FitRsltPtr = qADC->Fit(fity, "QBMS");
+    cout<<endl;
     c1->SaveAs(temp_str.c_str());
     c1->SaveAs("Monitor.png");
 	temp_str="data/"+run_name+"/event.root";
@@ -630,23 +631,19 @@ int adc_mode(DRSBoard *b)
    	file<<"\n-------------------------------------------------\n";
    	file.close();
    	
-   	temp_str="data/"+run_name+"/fit_params.txt";
-   	file.open(temp_str.c_str(),ios::app|ios::out);
-   	pary[0]=0.5; // Gausian_Mean
-    pary[1]=3.0; // Gaus_Sigma
-    pary[2]=5.0; // gausian Norm
-    pary[3]=20.0;// Landau_Width
-    pary[4]=38.0;// Landau_MPV
-    pary[5]=20.0;// Landau_Norm
-    pary[6]=8;// Landau_Gausian_Width
-   	file<<"Pedestal_Gausian_Mean,"<<FitRsltPtr->Parameter(0)<<"\n";
-   	file<<"Pedestal_Gausian_StD,"<<FitRsltPtr->Parameter(1)<<"\n";
-   	file<<"Pedestal_Gausian_Normalization,"<<FitRsltPtr->Parameter(2)<<"\n";
-   	file<<"Landau_Width,"<<FitRsltPtr->Parameter(3)<<"\n";
-   	file<<"Landau_MPV,"<<FitRsltPtr->Parameter(4)<<"\n";
-   	file<<"Landau_Norm,"<<FitRsltPtr->Parameter(5)<<"\n";
-   	file<<"Landau_Gausian_Width,"<<FitRsltPtr->Parameter(6)<<"\n";
-   	file.close();
+    if(FitRsltPtr>0)
+    {
+       	temp_str="data/"+run_name+"/fit_params.txt";
+       	file.open(temp_str.c_str(),ios::app|ios::out);
+       	file<<"Pedestal_Gausian_Mean,"<<FitRsltPtr->Parameter(0)<<"\n";
+       	file<<"Pedestal_Gausian_StD,"<<FitRsltPtr->Parameter(1)<<"\n";
+       	file<<"Pedestal_Gausian_Normalization,"<<FitRsltPtr->Parameter(2)<<"\n";
+       	file<<"Landau_Width,"<<FitRsltPtr->Parameter(3)<<"\n";
+       	file<<"Landau_MPV,"<<FitRsltPtr->Parameter(4)<<"\n";
+       	file<<"Landau_Norm,"<<FitRsltPtr->Parameter(5)<<"\n";
+       	file<<"Landau_Gausian_Width,"<<FitRsltPtr->Parameter(6)<<"\n";
+       	file.close();
+    }
    	// Histograms for online plotting
     qADC->Write();
 	delete qADC ;
@@ -655,6 +652,7 @@ int adc_mode(DRSBoard *b)
     delete edepTree;
 	afile->Close();
 	delete afile;
+	delete fity ;
    	event_str="chmod -R 777 data/"+run_name;
 	system_return=system(event_str.c_str());
 	cout<<"\n\n";
