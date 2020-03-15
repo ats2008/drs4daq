@@ -391,7 +391,7 @@ int adc_mode(DRSBoard *b)
  	system_return=system(temp_str.c_str());
 	cout<<"\n\n\n";
 	
-    b->SetTriggerPolarity(true) ;        // true :negative edge
+  b->SetTriggerPolarity(true) ;        // true :negative edge
 //  b->SetTriggerPolarity(false);        // false :positive edge
    
    double energy=0;	
@@ -463,7 +463,16 @@ int adc_mode(DRSBoard *b)
 	// Histograms for online plotting
 	TH1D* qADC = new TH1D("qADC", "Signal Integral", 257, -1, 256); 
 	TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);
-	
+	c1->cd();
+    temp_str="data/"+run_name+"/qDep.png";
+    c1->SaveAs(temp_str.c_str());
+    c1->SaveAs("Monitor.png");
+	temp_str="data/"+run_name+"/event.root";
+	TFile* afile= new TFile(temp_str.c_str(),"recreate");
+    TTree* edepTree= new TTree("muEvents","muEvents");
+    edepTree->Branch("QDep",&energy);
+    temp_str="xdg-open Monitor.png &";
+ 	system_return=system(temp_str.c_str());
 	// EVENT LOOP
 	
    while( (infinite or (event_counter>eid)) and !break_loop) 
@@ -474,7 +483,6 @@ int adc_mode(DRSBoard *b)
       while (b->IsBusy());
 
       b->TransferWaves(0, 8); /* read all waveforms */
-
       /* read time (X) array of first channel in ns */
       /* decode waveform (Y) array of first channel in mV */
       if( save_waveform) if(eid%skip_evts==0)
@@ -523,6 +531,7 @@ int adc_mode(DRSBoard *b)
 	 //double get_energy(float waveform[8][102TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);4],int channel, double trigger_level,double neg_offset,double integrate_window,double freq )
       
       energy=get_energy(wave_array,time_array, channel, -40,10,50,5.12);
+      edepTree->Fill();
       qADC->Fill(energy);
       
 	  file.open(energy_str.c_str(), ios::out | ios::app);
@@ -533,6 +542,8 @@ int adc_mode(DRSBoard *b)
 	   if(eid%updates_stats_interval==0)
 	   {
 	         cout<<"\033[F";
+	         cout<<"\033[F";	
+             cout<<"\033[F";
 	         cout<<"\033[F";
 	         cout<<"\033[F";
 	         cout<<"\033[F"; // for moving back a line
@@ -551,6 +562,9 @@ int adc_mode(DRSBoard *b)
 	         cout<<"Total Number of Events\t:\t"<<eid<<endl;
 	         cout<<"Rate of events = \t:\t"<<event_rate<<" / min \n";
 	         qADC->Draw();
+	         temp_str="data/"+run_name+"/qDep.png";
+	         c1->SaveAs(temp_str.c_str());
+	         c1->SaveAs("Monitor.png");
 	   }
 	  printf("\r\t\t\t\t\t\t\t\t\t!!");
       printf("\rEvent ID  %lu \t\t|\tcharge : %f  pC", eid,energy);
@@ -573,7 +587,16 @@ int adc_mode(DRSBoard *b)
    	file<<"Number of events skipped at a stretch : "<<skip_evts-1<<endl;
    	file<<"Number of events saved to disc : "<<save_to_disc_count<<endl;
    	file<<"\n-------------------------------------------------\n";
+   	file.close();
    	
+   	// Histograms for online plotting
+    qADC->Write();
+	delete qADC ;
+	delete c1 ;
+	edepTree->Write();
+    delete edepTree;
+	afile->Close();
+	delete afile;
    	event_str="chmod -R 777 data/"+run_name;
 	system_return=system(event_str.c_str());
 	cout<<"\n\n";
