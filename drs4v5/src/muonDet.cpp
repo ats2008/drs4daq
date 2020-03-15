@@ -69,7 +69,12 @@
 #define UPADATE_STATS_INTERVAL 20
 /*------------------------------------------------------------------*/
 
+/*  Root Fit Functions */
 
+Double_t totalfunc(Double_t* x, Double_t* par);
+Double_t gausX(Double_t* x, Double_t* par);
+Double_t langaufun(Double_t *x, Double_t *par);
+/* _______________  */
 
 
 static volatile bool break_loop = false;
@@ -103,6 +108,11 @@ int counter_mode(DRSBoard *b);
 
 int main()
 {
+
+   cout.setf(ios::fixed);
+   cout.setf(ios::showpoint);
+   cout.precision();
+
    int nBoards;
    DRS *drs;
    DRSBoard *b;
@@ -281,6 +291,7 @@ int adc_mode(DRSBoard *b)
    bool infinite=false;
    bool save_waveform=false;
    int updates_stats_interval=UPADATE_STATS_INTERVAL;
+   int updates_Fit_interval=UPADATE_STATS_INTERVAL*10;
    int event_rate;
    
    time_t start_t = time(0);
@@ -316,7 +327,7 @@ int adc_mode(DRSBoard *b)
    cout<<"Enter channenl of interest [1,2,3 or 4] : "<<channel<<"\n";
    			//cin>>channel;
    	if (channel<1 or channel>4)
-   		{  TH1F* histadc = new TH1F("histadc", "histadc", 512, -0.125, 511.125);
+   		{  
    			cout<<"\n please enter a valid channel ID (1,2,3,4) !";
    			return 1;
    		}
@@ -389,9 +400,9 @@ int adc_mode(DRSBoard *b)
  	cout<<"\nRemarks \t: \n\n";
  	temp_str="cat data/"+run_name+"/remarks.txt";
  	system_return=system(temp_str.c_str());
-	cout<<"\n\n\n";
+	cout<<"\n\n";
 	
-  b->SetTriggerPolarity(true) ;        // true :negative edge
+   b->SetTriggerPolarity(true) ;        // true :negative edge
 //  b->SetTriggerPolarity(false);        // false :positive edge
    
    double energy=0;	
@@ -403,6 +414,7 @@ int adc_mode(DRSBoard *b)
   // OR  Bit0=CH1, Bit1=CH2,  Bit2=CH3,  Bit3=CH4,  Bit4=EXT
   // AND Bit8=CH1, Bit9=CH2, Bit10=CH3, Bit11=CH4, Bit12=EXT
   
+ //  b->SetTriggerSource(0xF);    //For OR logic on channel 1,2,3,4
    b->SetTriggerSource(0xB00);  //For internal 3 fold coincidance
    
    if (DEBUG_MODE)  
@@ -413,7 +425,7 @@ int adc_mode(DRSBoard *b)
    b->SetTriggerDelayNs(50);             // 50 ns trigger delay
    
    
-	   unsigned long int eid=0;
+	 unsigned long int eid=0;
 	 curr_t = time(0);
      diff=curr_t;
 	 event_rate = int(float(updates_stats_interval)/int(diff-curr_t+1));
@@ -460,11 +472,29 @@ int adc_mode(DRSBoard *b)
 	muEvent[0].eheader.range=0;
 	int save_to_disc_count=0;
 	
-	// Histograms for online plotting
+	//Fitting function for the histogram
+    TF1* fity = new TF1("fitey", totalfunc, 0.0, 511.0, 7);
+    //parameters : {Gausian_Mean, Gaus_Sigma, Gaus_Norm, Landau_Width, Landau_MPV, Landau_Norm, Landau_Gausian_Width};
+	double  pary[7];
+    pary[0]=0.5; // Gausian_Mean
+    pary[1]=3.0; // Gaus_Sigma
+    pary[2]=5.0; // gausian Norm
+    pary[3]=20.0;// Landau_Width
+    pary[4]=38.0;// Landau_MPV
+    pary[5]=20.0;// Landau_Norm
+    pary[6]=8;// Landau_Gausian_Width
+    fity->SetParameters(pary);
+    TFitResultPtr FitRsltPtr;
+	// Histograms for online plotting 
 	TH1D* qADC = new TH1D("qADC", "Signal Integral", 257, -1, 256); 
 	TCanvas* c1 = new TCanvas("c1", "c1", 800, 400);
 	c1->cd();
+
+    gStyle->SetOptStat(11);
+    gStyle->SetOptFit(1111);
+
     temp_str="data/"+run_name+"/qDep.png";
+    FitRsltPtr = qADC->Fit(fity, "QBMS");
     c1->SaveAs(temp_str.c_str());
     c1->SaveAs("Monitor.png");
 	temp_str="data/"+run_name+"/event.root";
@@ -485,7 +515,7 @@ int adc_mode(DRSBoard *b)
       b->TransferWaves(0, 8); /* read all waveforms */
       /* read time (X) array of first channel in ns */
       /* decode waveform (Y) array of first channel in mV */
-      if( save_waveform) if(eid%skip_evts==0)
+     if( save_waveform) if(eid%skip_evts==0)
       {
 			b->GetTime(0, 0, b->GetTriggerCell(0), time_array[0]);
 			b->GetWave(0, 0, wave_array[0]);
@@ -539,11 +569,21 @@ int adc_mode(DRSBoard *b)
       file<<temp_str;
 	  file.close();
 	
+	    if(eid%updates_Fit_interval==0)
+         {
+             pary[5]=qADC->GetMean();
+             pary[2]=pary[5]*0.05;
+             pary[4]=qADC->GetMean();
+             fity->SetParameters(pary);
+             FitRsltPtr = qADC->Fit(fity, "QBMS");
+//             cout<<endl;
+         }
 	   if(eid%updates_stats_interval==0)
 	   {
 	         cout<<"\033[F";
-	         cout<<"\033[F";	
-             cout<<"\033[F";
+	         cout<<"\033[F";
+	         cout<<"\033[F";
+	         cout<<"\033[F";
 	         cout<<"\033[F";
 	         cout<<"\033[F";
 	         cout<<"\033[F"; // for moving back a line
@@ -563,11 +603,12 @@ int adc_mode(DRSBoard *b)
 	         cout<<"Rate of events = \t:\t"<<event_rate<<" / min \n";
 	         qADC->Draw();
 	         temp_str="data/"+run_name+"/qDep.png";
+	         cout<<endl;
 	         c1->SaveAs(temp_str.c_str());
 	         c1->SaveAs("Monitor.png");
 	   }
 	  printf("\r\t\t\t\t\t\t\t\t\t!!");
-      printf("\rEvent ID  %lu \t\t|\tcharge : %f  pC", eid,energy);
+      printf("\rEvent ID  %lu \t\t\t|\tcharge : %f  pC", eid,energy);
    }
    
    break_loop=true;
@@ -589,6 +630,23 @@ int adc_mode(DRSBoard *b)
    	file<<"\n-------------------------------------------------\n";
    	file.close();
    	
+   	temp_str="data/"+run_name+"/fit_params.txt";
+   	file.open(temp_str.c_str(),ios::app|ios::out);
+   	pary[0]=0.5; // Gausian_Mean
+    pary[1]=3.0; // Gaus_Sigma
+    pary[2]=5.0; // gausian Norm
+    pary[3]=20.0;// Landau_Width
+    pary[4]=38.0;// Landau_MPV
+    pary[5]=20.0;// Landau_Norm
+    pary[6]=8;// Landau_Gausian_Width
+   	file<<"Pedestal_Gausian_Mean,"<<FitRsltPtr->Parameter(0)<<"\n";
+   	file<<"Pedestal_Gausian_StD,"<<FitRsltPtr->Parameter(1)<<"\n";
+   	file<<"Pedestal_Gausian_Normalization,"<<FitRsltPtr->Parameter(2)<<"\n";
+   	file<<"Landau_Width,"<<FitRsltPtr->Parameter(3)<<"\n";
+   	file<<"Landau_MPV,"<<FitRsltPtr->Parameter(4)<<"\n";
+   	file<<"Landau_Norm,"<<FitRsltPtr->Parameter(5)<<"\n";
+   	file<<"Landau_Gausian_Width,"<<FitRsltPtr->Parameter(6)<<"\n";
+   	file.close();
    	// Histograms for online plotting
     qADC->Write();
 	delete qADC ;
@@ -602,3 +660,66 @@ int adc_mode(DRSBoard *b)
 	cout<<"\n\n";
 	return 0;
 }
+ 
+Double_t langaufun(Double_t *x, Double_t *par) 
+{
+
+  //Fit parameters:
+  //par[0]=Width (scale) parameter of Landau density
+  //par[1]=Most Probable (MP, location) parameter of Landau density
+  //par[2]=Total area (integral -inf to inf, normalization constant)
+  //par[3]=Width (sigma) of convoluted Gaussian function
+  //
+  //In the Landau distribution (represented by the CERNLIB approximation), 
+  //the maximum is located at x=-0.22278298 with the location parameter=0.
+  //This shift is corrected within this function, so that the actual
+  //maximum is identical to the MP parameter.
+  
+  // Numeric constants
+  Double_t invsq2pi = 0.3989422804014;   // (2 pi)^(-1/2)
+  Double_t mpshift  = -0.22278298;       // Landau maximum location
+  
+  // Control constants
+  Double_t np = 100.0;      // number of convolution steps
+  Double_t sc =   5.0;      // convolution extends to +-sc Gaussian sigmas
+  
+  // Variables
+  Double_t xx;
+  Double_t mpc;
+  Double_t fland;
+  Double_t sum = 0.0;
+  Double_t xlow,xupp;
+  Double_t step;
+  Double_t i;
+  
+  
+  // MP shift correction
+  mpc = par[1] - mpshift * par[0]; 
+  
+  // Range of convolution integral
+  xlow = x[0] - sc * par[3];
+  xupp = x[0] + sc * par[3];
+  
+  step = (xupp-xlow) / np;
+  
+  // Convolution integral of Landau and Gaussian by sum
+  for(i=1.0; i<=np/2; i++) {
+    xx = xlow + (i-.5) * step;
+    fland = TMath::Landau(xx,mpc,par[0]) / par[0];
+    sum += fland * TMath::Gaus(x[0],xx,par[3]);
+    
+    xx = xupp - (i-.5) * step;
+    fland = TMath::Landau(xx,mpc,par[0]) / par[0];
+    sum += fland * TMath::Gaus(x[0],xx,par[3]);
+  }
+  
+  return (par[2] * step * sum * invsq2pi / par[3]);
+}
+
+Double_t gausX(Double_t* x, Double_t* par){
+  return par[0]*(TMath::Gaus(x[0], par[1], par[2], kTRUE));
+}
+Double_t totalfunc(Double_t* x, Double_t* par){
+  return gausX(x, par) + langaufun(x, &par[3]);
+}
+
