@@ -473,7 +473,10 @@ int adc_mode(DRSBoard *b)
 	int save_to_disc_count=0;
 	
 	//Fitting function for the histogram
-    TF1* fity = new TF1("fitey", totalfunc, 0.0, 511.0, 7);
+     TF1* fity = new TF1("fitey", langaufun, 5, 258, 4);
+    //    TF1* fity = new TF1("fitey", totalfunc, 0.0,258, 7);
+    
+    
     //parameters : {Gausian_Mean, Gaus_Sigma, Gaus_Norm, Landau_Width, Landau_MPV, Landau_Norm, Landau_Gausian_Width};
 	double  pary[7];
     pary[0]=0.5; // Gausian_Mean
@@ -572,11 +575,11 @@ int adc_mode(DRSBoard *b)
 	
 	    if(eid%updates_Fit_interval==0)
          {
-             pary[5]=qADC->GetMean();
+             pary[5]=qADC->Integral();
              pary[2]=pary[5]*0.05;
              pary[4]=qADC->GetMean();
              fity->SetParameters(pary);
-             FitRsltPtr = qADC->Fit(fity, "QBMS");
+             FitRsltPtr = qADC->Fit(fity, "RQBMS");
 //             cout<<endl;
          }
 	   if(eid%updates_stats_interval==0)
