@@ -578,7 +578,8 @@ int adc_mode(DRSBoard *b)
              pary[5]=qADC->Integral();
              pary[2]=pary[5]*0.05;
              pary[4]=qADC->GetMean();
-             fity->SetParameters(pary);
+             fity->SetParameters(&pary[3]); // for landau from 5-257
+//             fity->SetParameters(pary); // For totfunc
              FitRsltPtr = qADC->Fit(fity, "RQBMS");
 //             cout<<endl;
          }
