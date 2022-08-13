@@ -244,7 +244,7 @@ int counter_mode(DRSBoard *b)
 					
 				}
 				break;
-		default :
+		tsleep)default :
 				{
 					cout<<"\n enter a valid choise !! \n";
 					return 1;
@@ -285,7 +285,7 @@ int adc_mode(DRSBoard *b)
    int calib_channel_id=0;
 
    fstream file;
-   string run_name="atsrun",energy_str,event_str,temp_str;
+   string run_name="defaultRun",energy_str,event_str,temp_str;
    unsigned long int event_counter=500;
    int channel=3,skip_evts=2;
    bool infinite=false;

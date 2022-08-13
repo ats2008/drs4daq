@@ -31,8 +31,8 @@ else
 DOS           = OS_LINUX
 endif
 
-CFLAGS        += -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -D$(DOS) -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX
-LIBS          = -lpthread -lutil -lusb-1.0 -lstdc++ -lm -lGui -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -pthread -lm -ldl -rdynamic
+CFLAGS        += -g -O2 -Wall -Wuninitialized -fno-strict-aliasing -Iinclude -I/usr/local/include -D$(DOS) -DHAVE_USB -DHAVE_LIBUSB10 -DUSE_DRS_MUTEX `root-config  --cflags`
+LIBS          = -lpthread -lutil -lusb-1.0 -lstdc++ -lm -lGui -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -pthread -lm -ldl -rdynamic `root-config  --ldflags`
 
 
 ifeq ($(OS),Darwin)
@@ -61,7 +61,7 @@ endif
 drs_exam: $(OBJECTS) $(OBJDIR)/drs_exam.o
 	$(CXX) $(CFLAGS) $^ -o drs_exam $(LIBS) $(WXLIBS)
 
-muonDet: $(OBJECTS) $(CPP_OBJ) $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/muonDet.o 
+muonDet: $(OBJECTS) $(CPP_OBJ) $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/muonDet.o $(OBJDIR)/musbstd.o
 	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) $(WXLIBS)
 
 try: $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/try.o 
@@ -86,6 +86,7 @@ $(CPP_OBJ):$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CXX) $(CFLAGS) $(WXFLAGS) -c $< -o $@ 
 
 $(OBJECTS):$(OBJDIR)/%.o: $(SRCDIR)/%.c 
+	mkdir -p obj	
 	$(CC) $(CFLAGS) -c $< -o $@ 
 
 clean:
