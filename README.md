@@ -35,7 +35,7 @@ sudo ldconfig $ROOTSYS/lib
 ```
 
 ## Compiling the `muonDet` module
-```bash
+```bashmuondet
 cd drs4daq
 ```
 
@@ -44,5 +44,5 @@ make muonDet
 ```
 ### Execuing the Muon DAQ module
 ```bash
-bash ./muondet
+sudo ./muondet
 ```
