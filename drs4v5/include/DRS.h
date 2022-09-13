@@ -698,7 +698,7 @@ public:
    
    int          TransferSpareRegisters(unsigned char *p, int firstChannel, int lastChannel);
 
-   int 		TransferSpareRegisters(unsigned char *p, int begSpareAddr, int nBytes, int offSetToSpareAddr);
+   int 		TransferSpareRegisters(unsigned char *p, int begSpareAddr, int nBytes, unsigned int offSetToSpareAddr);
    
    int          DecodeWave(unsigned char *waveforms, unsigned int chipIndex, unsigned char channel,
                            unsigned short *waveform);

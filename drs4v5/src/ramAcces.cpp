@@ -107,6 +107,7 @@ int main()
       printf("No DRS4 evaluation board found\n");
       return 0;
    }
+
    b = drs->GetBoard(0);		/* continue working with first board only */
    b->Init();				/* initialize board */
    b->SetFrequency(5, true);		/* set sampling frequency */
@@ -135,9 +136,34 @@ int main()
 
 int read_spareRegisters(DRSBoard *b)
 {
-	int readOffset(0b110);
-	int offSetToSpareAddr(0x4804);
-	unsigned char  registryStore[100];
-        b->TransferSpareRegisters(registryStore, readOffset, 2, offSetToSpareAddr);
+	unsigned int offSetToSpareAddr(0x4804);
+	unsigned char  registryStore[100],c(0);
+	int nBytes(8);
+	int binary[8]; 
+        
+         
+        b->TransferSpareRegisters(registryStore, T_RAM, nBytes, offSetToSpareAddr); // depricated fn . suggested to use b->Read() directly with proper OFFSET [ from T_XX ], and address and size 
+	for(int i=0;i<nBytes;i++)
+	{
+		std::cout<<"i = "<<" | "<<registryStore[i] <<"  | ";
+		
+		for(int n = 0; n < 8; n++)
+		{	
+		    binary[7-n] = (registryStore[i] >> n) & 1;
+		}
+		c+=1;
+		for(int n = 0; n < 8; n++)
+			std::cout<<binary[n];
+		std::cout<<"\n";
+
+	}
+
+	std::cout<<" Serial number from stdandard function : "<<b->GetBoardSerialNumber()<<"\n";
+	offSetToSpareAddr=0x4804;
+        b->Read(T_RAM, registryStore, offSetToSpareAddr, 2);
+	int num=(static_cast < int >(registryStore[1]) << 8) + registryStore[0];
+	std::cout<<" serial number : "<< num <<"\n";
+	
+        return 0;
 }
 

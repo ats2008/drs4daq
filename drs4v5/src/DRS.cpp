@@ -9,6 +9,22 @@
 
 \********************************************************************/
 
+/******************************************************/
+
+#include "string"
+
+template <typename I> std::string n2hexstr(I w, size_t hex_len = sizeof(I)<<1) {
+    static const char* digits = "0123456789ABCDEF";
+    std::string rc(hex_len,'0');
+    for (size_t i=0, j=(hex_len-1)*4 ; i<hex_len; ++i,j-=4)
+        rc[i] = digits[(w>>j) & 0x0f];
+    return rc;
+}
+
+
+/*********************************************************/
+
+
 #define NEW_TIMING_CALIBRATION
 
 #ifdef USE_DRS_MUTEX 
@@ -786,6 +802,7 @@ void DRSBoard::ReadSerialNumber()
    fFirmwareVersion = (static_cast < int >(buffer[1]) << 8) +buffer[0];
 
    // retrieve board serial number
+   std::cout<<" retrieve board serial number \n";
    Read(T_STATUS, buffer, REG_SERIAL_BOARD, 2);
    number = (static_cast < int >(buffer[1]) << 8) +buffer[0];
    fBoardSerialNumber = number;
@@ -1321,6 +1338,19 @@ int DRSBoard::Write(int type, unsigned int addr, void *data, int size)
 
 int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
 {
+      /*std::cout<<"\n-->| "<<"  addr : "<<addr<<" | size  : "<<size<<" | type ";
+      if (type == T_CTRL)
+	std::cout<<"T_CTRL";
+      else if (type == T_STATUS)
+	std::cout<<"T_STATUS";
+      else if (type == T_FIFO)
+	std::cout<<"T_FIFO";
+      else if (type == T_RAM)
+	std::cout<<"T_RAM";
+      else
+	std::cout<<"T_XXX";
+      std::cout<<"\n";*/
+
 #ifdef USE_DRS_MUTEX
    if (!s_drsMutex) {
       s_drsMutex = new wxMutex();
@@ -1482,7 +1512,23 @@ int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
 
       /* check for maximum size */
       assert(size <= USB2_BUFFER_SIZE - 10);
-
+      /*
+      if (type == T_CTRL){
+	std::cout<<"setting T_CTRL\n";
+      }
+      else if (type == T_STATUS){
+	std::cout<<"setting T_STATUS "<<USB2_STATUS_OFFSET<<" \n";
+      }
+      else if (type == T_FIFO){
+	std::cout<<"setting T_FIFO\n";
+      }
+      else if (type == T_RAM){
+	std::cout<<"setting T_RAM\n";
+      }  
+      else{
+	std::cout<<"setting ALAS\n";
+      }
+       */
       if (type == T_CTRL)
          base_addr = USB2_CTRL_OFFSET;
       else if (type == T_STATUS)
@@ -1493,7 +1539,7 @@ int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
          base_addr = USB2_RAM_OFFSET;
       else
          base_addr = 0;
-
+      //std::cout<<" base_addr = "<<base_addr<<"\n";
       if (type != T_RAM && size == 2) {
          /* word swapping: first 16 bit sit at upper address */
          if ((addr % 4) == 0)
@@ -1503,7 +1549,7 @@ int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
       }
 
       addr += base_addr;
-
+      std::cout<<"--> in Read : actully reading reading  : "<<addr<<" | 0x"<<n2hexstr(addr)<<"\n";
       buffer[0] = USB2_CMD_READ;
       buffer[1] = 0;
 
@@ -3305,103 +3351,45 @@ int DRSBoard::TransferWaves(int firstChannel, int lastChannel)
 
 /*------------------------------------------------------------------*/
 
-int DRSBoard::TransferSpareRegisters(unsigned char *p, int begSpareAddr, int nBytes, int offSetToSpareAddr)
+int DRSBoard::TransferSpareRegisters(unsigned char *p,  int type, int nBytes, unsigned int offSetToSpareAddr)
 {
 
    // Transfer all waveforms at once from VME or USB to location
-   int n, offset, n_requested;
-  
-   offset = begSpareAddr + offSetToSpareAddr ;
+   int n,n_requested;
+   int  offset;
+ 	
+   std::cout<<" --> inside TransferSpareRegisters <--- \n";
+      if (type == T_CTRL){
+         offset = USB2_CTRL_OFFSET;}
+      else if (type == T_STATUS){
+	std::cout<<"setting T_STATUS "<<USB2_STATUS_OFFSET<<" \n";
+         offset = USB2_STATUS_OFFSET;}
+      else if (type == T_FIFO){
+	std::cout<<"setting T_FIFO\n";
+         offset = USB2_FIFO_OFFSET;}
+      else if (type == T_RAM){
+	std::cout<<"setting T_RAM\n";
+         offset = USB2_RAM_OFFSET;}
+      else{
+	std::cout<<"setting ALAS\n";
+         offset = 0;}
+    std::cout<<" offset = "<<offset<<" / "<<offSetToSpareAddr<<"\n";	
+ 	
+   offset = offset + offSetToSpareAddr ;
    n_requested=nBytes;
 
-   //if ( begSpareAddr < 0 || firstChannel > fNumberOfChips * fNumberOfChannels) {
-   if ( begSpareAddr < 0) {
-      printf("Error: Invalid beg Addr index %d\n", begSpareAddr);
-      return 0;
-   }
-
-   if ( offSetToSpareAddr < 0) {
-      printf("Error: Invalid offset to spare Addr index %d\n", offSetToSpareAddr);
-      return 0;
-   }
-
-   if (fTransport == TR_VME) {
-      printf("Setting up channes for TR_VME  as fTransport \n");
-   }
-
-   else if (fTransport == TR_USB2) {
+   if (fTransport == TR_USB2) {
       /* USB2 FPGA contains 9 (Eval) or 10 (Mezz) channels */
       printf("Setting up channes for TR_USB2  as fTransport \n");
    }
-
-   else if (fTransport == TR_USB) 
-   {
-      printf("Setting up channes for TR_USB  as fTransport \n");
-   }
-
    
-  //if (fMultiBuffer)
-  //    offset += n_requested * fReadPointer;
-   n = Read(T_RAM, p, offset, n_requested);
-   for(int i=0;i< n_requested;i++)
-	printf("%d --> %u \n",i,p[i])	;
+   n = Read(type, p, offSetToSpareAddr, n_requested);
+   std::cout<<"  | "<<type<<"  | "<< offset <<" | "<<n_requested <<"  | "<<"\n";
+   for(int i=0;i<n_requested;i++)
+	printf("i = %d --> read ith byte as  %d \n",i,p[i])	;
    printf("Read out %d bytes\n",n)	 ;	
-   printf("\n\n");
-   /*
-   if (fMultiBuffer)
-      IncrementMultiBufferRP();
-
-   if (n != n_requested) {
-      printf("Error: only %d bytes read instead of %d\n", n, n_requested);
-      return n;
-   }
-
-   */
-
-   // read trigger cells
-   // if (fDRSType == 4) {
-   //    if (fBoardType == 5 || fBoardType == 7 || fBoardType == 8 || fBoardType == 9) {
-   //       if ((fBoardType == 7  || fBoardType == 8 || fBoardType == 9) && fFirmwareVersion >= 17147) {
-   //          // new code reading trailer
-   //          ptr = p + n_requested - 4;
-   //          fStopCell[0] = *((unsigned short *)(ptr));
-   //          fStopWSR[0]  = *(ptr + 2);
-   //       } else {
-   //          // old code reading status register
-   //          Read(T_STATUS, fStopCell, REG_STOP_CELL0, 2);
-   //          Read(T_STATUS, &w, REG_STOP_WSR0, 2);
-   //          fStopWSR[0] = (w >> 8) & 0xFFFF;
-   //       }
-   //    } else {
-
-   //       if (fBoardType == 6) {
-   //          // new code reading trailer
-   //          ptr = p + n_requested - 16;
-   //          for (i=0 ; i<4 ; i++) {
-   //             fStopCell[i] = *((unsigned short *)(ptr + i*2));
-   //             fStopWSR[i]  = *(ptr + 8 + i);
-   //          }
-   //          fTriggerBus = *((unsigned short *)(ptr + 12));
-   //       } else {
-   //          // old code reading registers
-   //          Read(T_STATUS, &dw, REG_STOP_CELL0, 4);
-   //          fStopCell[0] = (dw >> 16) & 0xFFFF;
-   //          fStopCell[1] = (dw >>  0) & 0xFFFF;
-   //          Read(T_STATUS, &dw, REG_STOP_CELL2, 4);
-   //          fStopCell[2] = (dw >> 16) & 0xFFFF;
-   //          fStopCell[3] = (dw >>  0) & 0xFFFF;
-
-   //          Read(T_STATUS, &dw, REG_STOP_WSR0, 4);
-   //          fStopWSR[0] = (dw >> 24) & 0xFF;
-   //          fStopWSR[1] = (dw >> 16) & 0xFF;
-   //          fStopWSR[2] = (dw >>  8) & 0xFF;
-   //          fStopWSR[3] = (dw >>  0) & 0xFF;
-
-   //          Read(T_STATUS, &fTriggerBus, REG_TRIGGER_BUS, 2);
-   //       }
-   //    }
-   // }
-  
+   printf("--->       <----\n");
+ 
    return n;
 }
 
