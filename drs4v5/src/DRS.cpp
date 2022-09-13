@@ -3305,6 +3305,108 @@ int DRSBoard::TransferWaves(int firstChannel, int lastChannel)
 
 /*------------------------------------------------------------------*/
 
+int DRSBoard::TransferSpareRegisters(unsigned char *p, int begSpareAddr, int nBytes, int offSetToSpareAddr)
+{
+
+   // Transfer all waveforms at once from VME or USB to location
+   int n, offset, n_requested;
+  
+   offset = begSpareAddr + offSetToSpareAddr ;
+   n_requested=nBytes;
+
+   //if ( begSpareAddr < 0 || firstChannel > fNumberOfChips * fNumberOfChannels) {
+   if ( begSpareAddr < 0) {
+      printf("Error: Invalid beg Addr index %d\n", begSpareAddr);
+      return 0;
+   }
+
+   if ( offSetToSpareAddr < 0) {
+      printf("Error: Invalid offset to spare Addr index %d\n", offSetToSpareAddr);
+      return 0;
+   }
+
+   if (fTransport == TR_VME) {
+      printf("Setting up channes for TR_VME  as fTransport \n");
+   }
+
+   else if (fTransport == TR_USB2) {
+      /* USB2 FPGA contains 9 (Eval) or 10 (Mezz) channels */
+      printf("Setting up channes for TR_USB2  as fTransport \n");
+   }
+
+   else if (fTransport == TR_USB) 
+   {
+      printf("Setting up channes for TR_USB  as fTransport \n");
+   }
+
+   
+  //if (fMultiBuffer)
+  //    offset += n_requested * fReadPointer;
+   n = Read(T_RAM, p, offset, n_requested);
+   for(int i=0;i< n_requested;i++)
+	printf("%d --> %u \n",i,p[i])	;
+   printf("Read out %d bytes\n",n)	 ;	
+   printf("\n\n");
+   /*
+   if (fMultiBuffer)
+      IncrementMultiBufferRP();
+
+   if (n != n_requested) {
+      printf("Error: only %d bytes read instead of %d\n", n, n_requested);
+      return n;
+   }
+
+   */
+
+   // read trigger cells
+   // if (fDRSType == 4) {
+   //    if (fBoardType == 5 || fBoardType == 7 || fBoardType == 8 || fBoardType == 9) {
+   //       if ((fBoardType == 7  || fBoardType == 8 || fBoardType == 9) && fFirmwareVersion >= 17147) {
+   //          // new code reading trailer
+   //          ptr = p + n_requested - 4;
+   //          fStopCell[0] = *((unsigned short *)(ptr));
+   //          fStopWSR[0]  = *(ptr + 2);
+   //       } else {
+   //          // old code reading status register
+   //          Read(T_STATUS, fStopCell, REG_STOP_CELL0, 2);
+   //          Read(T_STATUS, &w, REG_STOP_WSR0, 2);
+   //          fStopWSR[0] = (w >> 8) & 0xFFFF;
+   //       }
+   //    } else {
+
+   //       if (fBoardType == 6) {
+   //          // new code reading trailer
+   //          ptr = p + n_requested - 16;
+   //          for (i=0 ; i<4 ; i++) {
+   //             fStopCell[i] = *((unsigned short *)(ptr + i*2));
+   //             fStopWSR[i]  = *(ptr + 8 + i);
+   //          }
+   //          fTriggerBus = *((unsigned short *)(ptr + 12));
+   //       } else {
+   //          // old code reading registers
+   //          Read(T_STATUS, &dw, REG_STOP_CELL0, 4);
+   //          fStopCell[0] = (dw >> 16) & 0xFFFF;
+   //          fStopCell[1] = (dw >>  0) & 0xFFFF;
+   //          Read(T_STATUS, &dw, REG_STOP_CELL2, 4);
+   //          fStopCell[2] = (dw >> 16) & 0xFFFF;
+   //          fStopCell[3] = (dw >>  0) & 0xFFFF;
+
+   //          Read(T_STATUS, &dw, REG_STOP_WSR0, 4);
+   //          fStopWSR[0] = (dw >> 24) & 0xFF;
+   //          fStopWSR[1] = (dw >> 16) & 0xFF;
+   //          fStopWSR[2] = (dw >>  8) & 0xFF;
+   //          fStopWSR[3] = (dw >>  0) & 0xFF;
+
+   //          Read(T_STATUS, &fTriggerBus, REG_TRIGGER_BUS, 2);
+   //       }
+   //    }
+   // }
+  
+   return n;
+}
+
+/*------------------------------------------------------------------*/
+
 int DRSBoard::TransferWaves(unsigned char *p, int firstChannel, int lastChannel)
 {
    // Transfer all waveforms at once from VME or USB to location

@@ -695,6 +695,11 @@ public:
    int          TransferWaves(unsigned char *p, int numberOfChannels = kNumberOfChipsMax * kNumberOfChannelsMax);
    int          TransferWaves(int firstChannel, int lastChannel);
    int          TransferWaves(unsigned char *p, int firstChannel, int lastChannel);
+   
+   int          TransferSpareRegisters(unsigned char *p, int firstChannel, int lastChannel);
+
+   int 		TransferSpareRegisters(unsigned char *p, int begSpareAddr, int nBytes, int offSetToSpareAddr);
+   
    int          DecodeWave(unsigned char *waveforms, unsigned int chipIndex, unsigned char channel,
                            unsigned short *waveform);
    int          DecodeWave(unsigned int chipIndex, unsigned char channel, unsigned short *waveform);

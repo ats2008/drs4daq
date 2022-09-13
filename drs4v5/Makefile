@@ -64,6 +64,9 @@ drs_exam: $(OBJECTS) $(OBJDIR)/drs_exam.o
 muonDet: $(OBJECTS) $(CPP_OBJ) $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/muonDet.o $(OBJDIR)/musbstd.o
 	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) $(WXLIBS)
 
+ramAcces : $(OBJECTS) $(CPP_OBJ) $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/ramAcces.o $(OBJDIR)/musbstd.o
+	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) $(WXLIBS)
+
 try: $(OBJDIR)/DRS4v5_lib.o $(OBJDIR)/try.o 
 	$(CXX) $(CFLAGS)  $^ -o $@ $(LIBS) 
 
@@ -74,6 +77,9 @@ $(OBJDIR)/drs_exam.o: $(SRCDIR)/drs_exam.cpp $(IDIR)/mxml.h $(IDIR)/DRS.h
 	$(CXX) $(CFLAGS) -c $< -o $@ 
 
 $(OBJDIR)/muonDet.o: $(SRCDIR)/muonDet.cpp $(IDIR)/mxml.h $(IDIR)/DRS.h
+	$(CXX) $(CFLAGS) -c $< -o $@ 
+
+$(OBJDIR)/ramAcces.o: $(SRCDIR)/ramAcces.cpp $(IDIR)/mxml.h $(IDIR)/DRS.h
 	$(CXX) $(CFLAGS) -c $< -o $@ 
 
 $(OBJDIR)/try.o: $(SRCDIR)/try.cpp $(SRCDIR)/DRS4v5_lib.cpp $(IDIR)/DRS4v5_lib.h $(IDIR)/drsoscBinary.h
