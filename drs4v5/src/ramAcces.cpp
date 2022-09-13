@@ -159,8 +159,8 @@ int read_spareRegisters(DRSBoard *b)
 	}
 
 	std::cout<<" Serial number from stdandard function : "<<b->GetBoardSerialNumber()<<"\n";
-	offSetToSpareAddr=0x4804;
-        b->Read(T_RAM, registryStore, offSetToSpareAddr, 2);
+	offSetToSpareAddr=0x24;
+        b->Read(T_STATUS, registryStore, offSetToSpareAddr, 2);
 	int num=(static_cast < int >(registryStore[1]) << 8) + registryStore[0];
 	std::cout<<" serial number : "<< num <<"\n";
 	

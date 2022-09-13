@@ -1338,18 +1338,6 @@ int DRSBoard::Write(int type, unsigned int addr, void *data, int size)
 
 int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
 {
-      /*std::cout<<"\n-->| "<<"  addr : "<<addr<<" | size  : "<<size<<" | type ";
-      if (type == T_CTRL)
-	std::cout<<"T_CTRL";
-      else if (type == T_STATUS)
-	std::cout<<"T_STATUS";
-      else if (type == T_FIFO)
-	std::cout<<"T_FIFO";
-      else if (type == T_RAM)
-	std::cout<<"T_RAM";
-      else
-	std::cout<<"T_XXX";
-      std::cout<<"\n";*/
 
 #ifdef USE_DRS_MUTEX
    if (!s_drsMutex) {
@@ -1512,23 +1500,6 @@ int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
 
       /* check for maximum size */
       assert(size <= USB2_BUFFER_SIZE - 10);
-      /*
-      if (type == T_CTRL){
-	std::cout<<"setting T_CTRL\n";
-      }
-      else if (type == T_STATUS){
-	std::cout<<"setting T_STATUS "<<USB2_STATUS_OFFSET<<" \n";
-      }
-      else if (type == T_FIFO){
-	std::cout<<"setting T_FIFO\n";
-      }
-      else if (type == T_RAM){
-	std::cout<<"setting T_RAM\n";
-      }  
-      else{
-	std::cout<<"setting ALAS\n";
-      }
-       */
       if (type == T_CTRL)
          base_addr = USB2_CTRL_OFFSET;
       else if (type == T_STATUS)
@@ -1549,7 +1520,6 @@ int DRSBoard::Read(int type, void *data, unsigned int addr, int size)
       }
 
       addr += base_addr;
-      std::cout<<"--> in Read : actully reading reading  : "<<addr<<" | 0x"<<n2hexstr(addr)<<"\n";
       buffer[0] = USB2_CMD_READ;
       buffer[1] = 0;
 
