@@ -244,7 +244,7 @@ int counter_mode(DRSBoard *b)
 					
 				}
 				break;
-		tsleep)default :
+		default :
 				{
 					cout<<"\n enter a valid choise !! \n";
 					return 1;
