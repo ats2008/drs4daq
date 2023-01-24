@@ -136,7 +136,7 @@ int main()
    b->Init();					/* initialize board */
    b->SetFrequency(5, true);	/* set sampling frequency */
    b->SetTranspMode(1);			/* enable transparent mode needed for analog trigger */
-   b->SetInputRange(0);			/* set input range to -0.5V ... +0.5V */
+   b->SetInputRange(0.0);			/* set input range to -0.5V ... +0.5V */
 
    if (b->GetBoardType() >= 8) 
    {           
@@ -404,8 +404,8 @@ int adc_mode(DRSBoard *b)
  	system_return=system(temp_str.c_str());
 	cout<<"\n\n";
 	
-   b->SetTriggerPolarity(true) ;        // true :negative edge
-//  b->SetTriggerPolarity(false);        // false :positive edge
+//   b->SetTriggerPolarity(true) ;        // true :negative edge
+  b->SetTriggerPolarity(true);        // false :positive edge
    
    double energy=0;	
 
@@ -419,8 +419,8 @@ int adc_mode(DRSBoard *b)
   // AND Bit8=CH1, Bit9=CH2, Bit10=CH3, Bit11=CH4, Bit12=EXT
   
  //  b->SetTriggerSource(0xF);    //For OR logic on channel 1,2,3,4
-   b->SetTriggerSource(0xB00);  //For internal 3 fold coincidance
-   
+//   b->SetTriggerSource(0xB00);  //For internal 3 fold coincidance
+   b->SetTriggerSource(0x0800);  //For channel 4 coincidance
    if (DEBUG_MODE)  
    {
    	cout<<"\n in DEBUG_MODE .. setting ext trigg source\n";
@@ -680,7 +680,7 @@ int read_spareRegisters(DRSBoard *b, unsigned int offSetToSpareAddr)
 	b->Read(REG_CONFIG, registryStore, offSetToSpareAddr, 2);
 	num=(static_cast < int >(registryStore[1]) << 8) + registryStore[0];
 	std::cout<<" register Address : "<< offSetToSpareAddr<<"\n";
-	std::cout<<" register value : "<< std::bitset<16> (num)<<" |  descimal --> "<<num/16<<"\n";
+	std::cout<<" register value : "<< std::bitset<16> (num)<<" |  descimal --> "<<num<<"\n";
 	
         return num;
 }
