@@ -6,7 +6,7 @@
   				and integrate peaks to get the charge
 
 \********************************************************************/
-
+#include <bitset>
 #include <math.h>
 
 #ifdef _MSC_VER
@@ -81,7 +81,7 @@ static volatile bool break_loop = false;
 static volatile bool DEBUG_MODE = false;
 
 int system_return=0;
-int read_spareRegisters(DRSBoard *b);
+int read_spareRegisters(DRSBoard *b, unsigned int offSetToSpareAddr);
 
 int main()
 {
@@ -125,8 +125,12 @@ int main()
     	return 0;
    	}
    	
-
-	read_spareRegisters(b);
+	unsigned int offSetToSpareAddr(0x24);
+	std::cout<<" Last bit of 0x23 will have Valid signal \n";
+	read_spareRegisters(b,0x24);
+	std::cout<<" TDC outputs  : 0x26  \n";
+	read_spareRegisters(b,0x26);
+	
 	
 	delete drs;
 	
@@ -134,35 +138,39 @@ int main()
 }
 
 
-int read_spareRegisters(DRSBoard *b)
+int read_spareRegisters(DRSBoard *b, unsigned int offSetToSpareAddr)
 {
-	unsigned int offSetToSpareAddr(0x4804);
+//	unsigned int offSetToSpareAddr(0x4804);
 	unsigned char  registryStore[100],c(0);
 	int nBytes(8);
 	int binary[8]; 
         
          
-        b->TransferSpareRegisters(registryStore, T_RAM, nBytes, offSetToSpareAddr); // depricated fn . suggested to use b->Read() directly with proper OFFSET [ from T_XX ], and address and size 
-	for(int i=0;i<nBytes;i++)
-	{
-		std::cout<<"i = "<<" | "<<registryStore[i] <<"  | ";
-		
-		for(int n = 0; n < 8; n++)
-		{	
-		    binary[7-n] = (registryStore[i] >> n) & 1;
-		}
-		c+=1;
-		for(int n = 0; n < 8; n++)
-			std::cout<<binary[n];
-		std::cout<<"\n";
-
-	}
+//      b->TransferSpareRegisters(registryStore, T_RAM, nBytes, offSetToSpareAddr); // depricated fn . suggested to use b->Read() directly with proper OFFSET [ from T_XX ], and address and size 
+//	for(int i=0;i<nBytes;i++)
+//	{
+//		std::cout<<"i = "<<" | "<<registryStore[i] <<"  | ";
+//		
+//		for(int n = 0; n < 8; n++)
+//		{	
+//		    binary[7-n] = (registryStore[i] >> n) & 1;
+//		}
+//		c+=1;
+//		for(int n = 0; n < 8; n++)
+//			std::cout<<binary[n];
+//		std::cout<<"\n";
+//
+//	}
 
 	std::cout<<" Serial number from stdandard function : "<<b->GetBoardSerialNumber()<<"\n";
-	offSetToSpareAddr=0x24;
-        b->Read(T_STATUS, registryStore, offSetToSpareAddr, 2);
+        b->Read(T_STATUS, registryStore, 0x24, 2);
 	int num=(static_cast < int >(registryStore[1]) << 8) + registryStore[0];
 	std::cout<<" serial number : "<< num <<"\n";
+	
+	b->Read(REG_CONFIG, registryStore, offSetToSpareAddr, 2);
+	num=(static_cast < int >(registryStore[1]) << 8) + registryStore[0];
+	std::cout<<" register Address : "<< offSetToSpareAddr<<"\n";
+	std::cout<<" register value : "<< std::bitset<16> (num)<<"\n";
 	
         return 0;
 }
